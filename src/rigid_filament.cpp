@@ -182,7 +182,6 @@ void RigidFilament::AddRandomDisplacement() {
       position_[i] += mag * orientation_[i];
   }
   // Then the perpendicular component(s)
- master
   for (int j = 0; j < n_dim_ - 1; ++j) {
     mag = rng_.RandomNormal(diffusion_perp_);
     for (int i = 0; i < n_dim_; ++i)
