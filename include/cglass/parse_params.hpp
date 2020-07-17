@@ -254,6 +254,8 @@ species_base_parameters *parse_species_params(std::string sid,
       params.min_length = jt->second.as<double>();
       } else if (param_name.compare("stationary_flag")==0) {
       params.stationary_flag = jt->second.as<bool>();
+      } else if (param_name.compare("constrain_motion_flag")==0) {
+      params.constrain_motion_flag = jt->second.as<bool>();
       } else if (param_name.compare("packing_fraction")==0) {
       params.packing_fraction = jt->second.as<double>();
       } else if (param_name.compare("n_equil")==0) {

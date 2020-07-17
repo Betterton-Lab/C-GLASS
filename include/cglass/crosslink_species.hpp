@@ -3,6 +3,7 @@
 
 #include "crosslink.hpp"
 #include "species.hpp"
+#include <KMC/kmc.hpp>
 
 typedef std::vector<std::pair<std::vector<Crosslink>::iterator,
                               std::vector<Crosslink>::iterator>>
@@ -10,11 +11,11 @@ typedef std::vector<std::pair<std::vector<Crosslink>::iterator,
 typedef std::vector<Crosslink>::iterator xlink_iterator;
 
 class CrosslinkSpecies : public Species<Crosslink, species_id::crosslink> {
- private:
+private:
   bool *update_;
   bool midstep_ = true;
   std::string checkpoint_file_;
-  double *obj_volume_;  // Total length of all the objects in the system
+  double *obj_volume_; // Total length of all the objects in the system
   double xlink_concentration_;
   double bind_site_density_;
   bool infinite_reservoir_flag_;
@@ -32,11 +33,12 @@ class CrosslinkSpecies : public Species<Crosslink, species_id::crosslink> {
   void ApplyCrosslinkTetherForces();
   Object *GetRandomObject();
 
- public:
+public:
   CrosslinkSpecies(unsigned long seed);
   void Init(std::string spec_name, ParamsParser &parser);
   void InitInteractionEnvironment(std::vector<Object *> *objs, double *obj_vol,
                                   bool *update);
+  void TestKMCStepSize();
   void GetInteractors(std::vector<Object *> &ixors);
   void UpdatePositions();
   void CleanUp();

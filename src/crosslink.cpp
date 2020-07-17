@@ -137,7 +137,7 @@ void Crosslink::DoublyKMC() {
     e_dep *= 0.5 * k_spring_compress_ * SQR(tether_stretch);
     f_dep *= k_spring_compress_ * tether_stretch;
   } else {
-    e_dep *= k_spring_ * SQR(tether_stretch);
+    e_dep *= 0.5 * k_spring_ * SQR(tether_stretch);
     f_dep *= k_spring_ * tether_stretch;
   }
   double unbind_prob = anchors_[0].GetOffRate() * delta_ * exp(e_dep + f_dep);

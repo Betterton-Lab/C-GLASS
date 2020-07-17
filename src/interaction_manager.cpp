@@ -325,12 +325,12 @@ void InteractionManager::ZeroDrTot() {
 }
 
 void InteractionManager::ProcessPairInteraction(ix_iterator ix) {
-  if (processing_ ) {
+  if (processing_) {
     mindist_.ObjectObject(*ix);
-     //Check to see if particles are not close enough to interact
+    //Check to see if particles are not close enough to interact
     if (ix->dr_mag2 > potentials_.GetRCut2())
       return;
-     //Calculates forces from the potential defined during initialization
+    //Calculates forces from the potential defined during initialization
     potentials_.CalcPotential(*ix);
     return;
   }

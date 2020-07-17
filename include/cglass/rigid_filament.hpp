@@ -6,7 +6,7 @@
 #include "mesh.hpp"
 
 class RigidFilament : public Mesh {
- private:
+private:
   rigid_filament_parameters *sparams_;
   double gamma_par_ = 0;
   double gamma_perp_ = 0;
@@ -17,13 +17,14 @@ class RigidFilament : public Mesh {
   double body_frame_[6];
   double min_length_ = 0;
   double max_length_ = 1000;
+  double constrain_vec_[3] = {}; // Rigid filaments move only in plane defined
+                                 // by this unit vector.
 
   bool zero_temperature_ = false;
   bool pseudo1D_ = false;
   int n_step_ = 0;
   int eq_steps_ = 0;
   int eq_steps_count_ = 0;
-
 
   void UpdateSiteBondPositions();
   void SetDiffusion();
@@ -45,13 +46,13 @@ class RigidFilament : public Mesh {
 
   void CalculateBinding();
 
- protected:
+protected:
   void InsertRigidFilament(std::string insertion_type, double buffer = -1);
   void GetBodyFrame();
   void AddRandomDisplacement();
   void AddRandomReorientation();
 
- public:
+public:
   RigidFilament(unsigned long seed);
   virtual void Init(rigid_filament_parameters *sparams);
   virtual void InsertAt(const double *const new_pos, const double *const u);
@@ -68,6 +69,9 @@ class RigidFilament : public Mesh {
   double const *const GetHeadPosition() {
     return sites_[n_sites_ - 1].GetPosition();
   }
+  void SetConstrainVec(const double *constrain_vec) {
+    std::copy(constrain_vec, constrain_vec + 3, constrain_vec_);
+  }
   void WritePosit(std::fstream &oposit);
   void ReadPosit(std::fstream &iposit);
   void WriteSpec(std::fstream &ospec);
@@ -83,4 +87,4 @@ typedef std::vector<std::pair<std::vector<RigidFilament>::iterator,
                               std::vector<RigidFilament>::iterator>>
     rigid_filament_chunk_vector;
 
-#endif  // _CGLASS_RIGID_FILAMENT_H_
+#endif // _CGLASS_RIGID_FILAMENT_H_

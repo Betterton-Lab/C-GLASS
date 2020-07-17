@@ -36,17 +36,17 @@ void Simulation::RunSimulation() {
    also update other objects' positions on every even step too (e.g. xlinks). */
   double delta_diff = 0;
   bool midstep = true;
+  /* With halfstep algorithm, each step only moves the simulation forward
+     by 1/2 delta. Defining step_fact prevents unnecessary if-else statements.*/
+  double step_fact = params_.no_midstep ? 1. : .5;
   time_ = 0;
   params_.i_step = 0;
   for (i_step_ = 1; params_.i_step < params_.n_steps + 1; ++i_step_) {
-    /* Assuming halfstep algorithm, each step only moves the simulation forward
-       by 1/2 delta */
-    time_ += 0.5 * Object::GetDelta();
-    params_.prev_step = params_.i_step;
+    time_ += step_fact * Object::GetDelta();
     params_.i_step = i_step_;
     if (params_.dynamic_timestep) {
       // Calculate nominal timestep
-      params_.i_step = (int)round(time_ / (0.5 * params_.delta));
+      params_.i_step = (int)round(time_ / (step_fact * params_.delta));
     }
     // Output progress
     PrintComplete();
@@ -54,17 +54,19 @@ void Simulation::RunSimulation() {
     ZeroForces();
     /* Calculate forces between objects in system */
     Interact();
+    /*Decrease or increase timestep depending on size of forces and torques 
+      on objects. Timestep remains the same if equal to initial timestep. */
     if (params_.dynamic_timestep && ix_mgr_.CheckDynamicTimestep()) {
       if (i_step_ <= 1) {
         /* We don't have a previous step to revert back to. */
         Logger::Error(
             "Dynamic timestep triggered on the first simulation step");
       }
-      if (midstep) {
+      if (midstep && !params_.no_midstep) {
         time_ -= Object::GetDelta();
         i_step_ -= 2;
       } else {
-        time_ -= 0.5 * Object::GetDelta();
+        time_ -= step_fact * Object::GetDelta();
         i_step_ -= 1;
       }
       midstep = true;

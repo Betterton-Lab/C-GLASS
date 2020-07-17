@@ -11,8 +11,8 @@ private:
   static double *unit_cell_;
   static double boundary_cut2_;
   static space_struct *space_;
-public:
 
+public:
   void PointPoint(double const *const r1, double const *const s1,
                   double const *const r2, double const *const s2, double *dr,
                   double *dr_mag2, double *midpoint);
@@ -38,9 +38,10 @@ public:
   void SpheroPlane(double *r_bond, double *u_bond, double length,
                    double *r_plane, double *n_plane, double *lambda,
                    double *r_min_mag2, double *r_min);
-  void CarrierLines(double *r_1, double *s_1, double *u_1, double *r_2,
-                    double *s_2, double *u_2, double *r_min, double *r_min_mag2,
-                    double *lambda, double *mu);
+  void CarrierLines(const double *r_1, const double *s_1, const double *u_1,
+                    const double *r_2, const double *s_2, const double *u_2,
+                    double *r_min, double *r_min_mag2, double *lambda,
+                    double *mu);
   void PointSphereBC(double const *const r, double *dr, double *dr_mag2,
                      double buffer);
   void SpheroSphereBC(double const *const r, double const *const u,

@@ -610,8 +610,9 @@ output: minimimum separation vector (r_min)
 (lambda) pointer to intersection of r_min with axis of second spherocylinder
 (mu). */
 
-void MinimumDistance::CarrierLines(double *r_1, double *s_1, double *u_1,
-                                   double *r_2, double *s_2, double *u_2,
+void MinimumDistance::CarrierLines(const double *r_1, const double *s_1,
+                                   const double *u_1, const double *r_2,
+                                   const double *s_2, const double *u_2,
                                    double *r_min, double *r_min_mag2,
                                    double *lambda, double *mu) {
   int i, j;

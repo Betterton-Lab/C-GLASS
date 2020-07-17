@@ -132,7 +132,14 @@ rigid_filament:
   max_length: [500, double]          # maximum filament length. also used for dynamic instability.
   min_length: [5, double]            # minimum filament length. also used for dynamic instability.
   stationary_flag: [false, bool]     # If true, rigid_filaments will not move regardless of forces on them.
-  packing_fraction: [-1, double]     # if num > 0, and packing fraction > 0, filaments are inserted
+ psuedo1D
+  packing_fraction: [-1, double]    # if num > 0, and packing fraction > 0, filaments are inserted
+
+  constrain_motion_flag: [false, bool] # If true, rigid filaments will move in planes such that two filaments
+                                       # will never physically overlap if they do not begin overlapping.
+                                       # This only works for two filaments. Warning will be thrown otherwise.
+  packing_fraction: [-1, double]    # if num > 0, and packing fraction > 0, filaments are inserted
+ master
   #                                  # until the ratio filament to system volumes match this value.
   n_equil: [0, int]                  # internal filament parameter used for shuffling.
   pseudo1D: [false, bool]            # with pseudo1D on the filaments won't rotate and  

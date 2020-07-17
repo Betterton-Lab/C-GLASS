@@ -25,14 +25,80 @@ void CrosslinkSpecies::InitInteractionEnvironment(std::vector<Object *> *objs,
   obj_volume_ = obj_vol; // Technically a length
   update_ = update;
   /* TODO Lookup table only works for filament objects. Generalize? */
-  // LUTFiller *lut_filler = new LUTFiller;
-  // LUTFillerEdep lut_filler(256, 256);
-  // lut_filler_ptr->Init(sparams_.k_spring * .5, sparams_.rest_length, 1);
   LUTFiller *lut_filler_ptr = MakeLUTFiller();
   lut_ = LookupTable(lut_filler_ptr);
   if (sparams_.use_binding_volume)
     lut_.setBindVol(lut_filler_ptr->getBindingVolume());
+  /* TODO: Add time testing right here <24-06-20, ARL> */
+  TestKMCStepSize();
   delete lut_filler_ptr;
+}
+
+/*! \brief Test simulation step size to make sure KMC will work properly.
+ *
+ * \return void, will end program if dt is too high.
+ */
+void CrosslinkSpecies::TestKMCStepSize() {
+  /* TODO: Make this acceptable for C-GLASS <24-06-20, ARL> */
+  KMC<int> kmc_diag(params_->delta, &lut_);
+
+  const double prob_thresh = 1e-4;
+
+  double probs[4];
+  double k_on_s = sparams_.k_on_s;
+  double k_on_d = sparams_.k_on_d;
+  double k_off_s = sparams_.k_off_s;
+  double k_off_d = sparams_.k_off_d;
+
+  // Constant rate factors for (un)binding. Change if bind model changes.
+  double u_s_fact =
+      xlink_concentration_ * k_on_s * bind_site_density_; //per length basis
+  double s_u_fact = k_off_s;
+  double s_d_fact = k_on_d * bind_site_density_;
+  if (sparams_.use_binding_volume)
+    s_d_fact /= lut_.getBindVolume();
+  double d_s_fact = k_off_d;
+
+  if (sparams_.energy_dep_factor == 0 && sparams_.force_dep_length == 0) {
+    kmc_diag.Diagnostic(u_s_fact, s_u_fact, s_d_fact, d_s_fact, probs);
+  } else {
+    kmc_diag.DiagnosticUnBindDep(u_s_fact, s_u_fact, s_d_fact, probs);
+  }
+
+  // If any probabilities of a double binding event occuring is too high,
+  // throw a warning.
+  bool throw_error = false;
+  if (probs[0] > prob_thresh || std::isnan(probs[0])) {
+    Logger::Warning(
+        "Probability of double event (U->S->U = %f) is too high. Try "
+        "decreasing delta, concentration, or singly (un)binding parameters.",
+        probs[0]);
+    throw_error = true;
+  }
+  if (probs[1] > prob_thresh || std::isnan(probs[1])) {
+    Logger::Warning(
+        "Probability of double event (U->S->D = %f) is too high. Try "
+        "decreasing delta, concentration, or binding parameters.",
+        probs[1]);
+    throw_error = true;
+  }
+  if (probs[2] > prob_thresh || std::isnan(probs[2])) {
+    Logger::Warning("Probability of double event (S->D->S = %f) is too high. "
+                    "Try decreasing delta or doubly (un)binding parameters.",
+                    probs[2]);
+    throw_error = true;
+  }
+  if (probs[3] > prob_thresh || std::isnan(probs[3])) {
+    Logger::Warning(" !!!Probability of double event (D->S->U = %f) is too "
+                    "high. Try decreasing delta or unbinding parameters.",
+                    probs[3]);
+    throw_error = true;
+  }
+
+  if (throw_error) {
+    Logger::Error("The likelyhood of a double KMC event is too high. Fix "
+                  "before continuing.");
+  }
 }
 
 LUTFiller *CrosslinkSpecies::MakeLUTFiller() {

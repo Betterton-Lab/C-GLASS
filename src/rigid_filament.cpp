@@ -13,7 +13,7 @@ void RigidFilament::SetParameters() {
   diameter_ = sparams_->diameter;
   max_length_ = sparams_->max_length;
   min_length_ = sparams_->min_length;
-  zero_temperature_ = params_->zero_temperature;  // include thermal forces
+  zero_temperature_ = params_->zero_temperature; // include thermal forces
   eq_steps_count_ = 0;
   pseudo1D_ = sparams_->pseudo1D;
 
@@ -27,7 +27,6 @@ void RigidFilament::Init(rigid_filament_parameters *sparams) {
   Reserve();
   InsertRigidFilament(sparams_->insertion_type, -1);
   SetDiffusion();
-
 }
 
 /* Returns number of bonds to initialize */
@@ -100,8 +99,24 @@ void RigidFilament::InsertRigidFilament(std::string insertion_type,
    relative to rod. */
 void RigidFilament::Integrate() {
   // Explicit calculation of Xi.F_s
-  double fric_mat[9] = {};  // Friction matrix for filament
-  double mob_mat[9] = {};   // Mobility matrix for filament
+  double fric_mat[9] = {}; // Friction matrix for filament
+  double mob_mat[9] = {};  // Mobility matrix for filament
+  double force_eff[3];
+  double torque_eff[3];
+  std::copy(force_, force_ + 3, force_eff);
+  std::copy(torque_, torque_ + 3, torque_eff);
+
+  // Constrain the motion of filaments to a plane defined by constrain_vec_
+  // by subtracting force components out of the plane and keeping torque
+  // components only along constrain_vec_ direction.
+  if (sparams_->constrain_motion_flag) {
+    double f_dot_u = dot_product(3, force_, constrain_vec_);
+    double t_dot_u = dot_product(3, torque_, constrain_vec_);
+    for (int i = 0; i < 3; ++i) {
+      force_eff[i] -= f_dot_u * constrain_vec_[i];
+      torque_eff[i] = t_dot_u * constrain_vec_[i];
+    }
+  }
   // Construct mobility matrix
   for (int i = 0; i < n_dim_; ++i) {
     for (int j = i + 1; j < n_dim_; ++j) {
@@ -117,15 +132,16 @@ void RigidFilament::Integrate() {
 
   for (int i = 0; i < n_dim_; ++i) {
     for (int j = 0; j < n_dim_; ++j) {
-      position_[i] += mob_mat[i * n_dim_ + j] * force_[j] * delta_;
+      position_[i] += mob_mat[i * n_dim_ + j] * force_eff[j] * delta_;
     }
   }
   // Reorientation due to external torques
   double du[3];
-  cross_product(torque_, orientation_, du, 3);  // ndim=3 since torques
+  cross_product(torque_eff, orientation_, du, 3); // ndim=3 since torques
   for (int i = 0; i < n_dim_; ++i) {
     orientation_[i] += du[i] * delta_ / gamma_rot_;
   }
+  normalize_vector(orientation_, n_dim_);
   if (!zero_temperature_) {
     // Add the random displacement dr(t)
     AddRandomDisplacement();
@@ -152,11 +168,21 @@ void RigidFilament::AddRandomDisplacement() {
   // Get vector(s) orthogonal to orientation
   GetBodyFrame();
   // First handle the parallel component
+ psuedo1D
   if (!pseudo1D_) {
     mag = rng_.RandomNormal(diffusion_par_);
-    for (int i = 0; i < n_dim_; ++i) position_[i] += mag * orientation_[i];
+    for (int i = 0; i < n_dim_; ++i) 
+      position_[i] += mag * orientation_[i];
   }
   // Then the perpendicular component(s)  
+
+  if (!pseudo1D_) {
+    mag = rng_.RandomNormal(diffusion_par_);
+    for (int i = 0; i < n_dim_; ++i)
+      position_[i] += mag * orientation_[i];
+  }
+  // Then the perpendicular component(s)
+ master
   for (int j = 0; j < n_dim_ - 1; ++j) {
     mag = rng_.RandomNormal(diffusion_perp_);
     for (int i = 0; i < n_dim_; ++i)
@@ -235,7 +261,8 @@ double const RigidFilament::GetVolume() {
 
 void RigidFilament::UpdatePosition() {
   ApplyForcesTorques();
-  if (!sparams_->stationary_flag) Integrate();
+  if (!sparams_->stationary_flag)
+    Integrate();
   eq_steps_count_++;
 }
 
@@ -317,7 +344,8 @@ void RigidFilament::ApplyInteractionForces() {
     // Add translational forces and pure torque forces at bond ends
     sites_[i].AddForce(site_force);
     sites_[i].AddForce(pure_torque);
-    for (int j = 0; j < n_dim_; ++j) pure_torque[j] *= -1;
+    for (int j = 0; j < n_dim_; ++j)
+      pure_torque[j] *= -1;
     sites_[i + 1].AddForce(site_force);
     sites_[i + 1].AddForce(pure_torque);
   }
@@ -353,8 +381,7 @@ void RigidFilament::ScalePosition() {
   UpdateBondPositions();
 }
 
-void RigidFilament::ReportAll() {
-}
+void RigidFilament::ReportAll() {}
 
 void RigidFilament::WriteSpec(std::fstream &ospec) {
   Logger::Trace("Writing rigid filament specs, object id: %d", GetOID());
@@ -362,7 +389,8 @@ void RigidFilament::WriteSpec(std::fstream &ospec) {
 }
 
 void RigidFilament::ReadSpec(std::fstream &ispec) {
-  if (ispec.eof()) return;
+  if (ispec.eof())
+    return;
   Mesh::ReadSpec(ispec);
 }
 
@@ -393,7 +421,8 @@ void RigidFilament::WritePosit(std::fstream &oposit) {
    double length
 */
 void RigidFilament::ReadPosit(std::fstream &iposit) {
-  if (iposit.eof()) return;
+  if (iposit.eof())
+    return;
   posits_only_ = true;
   for (int i = 0; i < 3; ++i)
     iposit.read(reinterpret_cast<char *>(&position_[i]), sizeof(double));
