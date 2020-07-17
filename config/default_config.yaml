@@ -139,8 +139,7 @@ rigid_filament:
                                        # will never physically overlap if they do not begin overlapping.
                                        # This only works for two filaments. Warning will be thrown otherwise.
   packing_fraction: [-1, double]    # if num > 0, and packing fraction > 0, filaments are inserted
- master
-  #                                  # until the ratio filament to system volumes match this value.
+                                     # until the ratio filament to system volumes match this value.
   n_equil: [0, int]                  # internal filament parameter used for shuffling.
   pseudo1D: [false, bool]            # with pseudo1D on the filaments won't rotate and  
 				     # will only move in the y direction
