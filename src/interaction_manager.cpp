@@ -23,6 +23,7 @@ void InteractionManager::Init(system_parameters *params,
   // Update dr distance should be half the cell length, and we are comparing the
   // squares of the trajectory distances
   xlink_.Init(params_, space_, &ix_objects_);
+  otrap_.Init(params_, space_);
   no_boundaries_ = false;
   if (space_->type == +boundary_type::none)
     no_boundaries_ = true;
@@ -70,8 +71,10 @@ void InteractionManager::Interact() {
     return;
   // Check if we need to update objects in cell list
   CheckUpdateObjects();
-  // Update crosslinks
+  // Update crosslinks and apply forces and torques to bound objects
   xlink_.UpdateCrosslinks();
+  // Update positions and forces optical traps apply to objects
+  otrap_.UpdateOpticalTraps();
   // Check if we need to update crosslink interactors
   CheckUpdateXlinks();
   // Check if we need to update pair interactions
@@ -125,6 +128,7 @@ void InteractionManager::UpdateInteractors() {
   interactors_.insert(interactors_.end(), ix_objects_.begin(),
                       ix_objects_.end());
   std::vector<Object *> xlinks;
+  //std::vector<Object *> otraps;
   xlink_.GetInteractors(xlinks);
   interactors_.insert(interactors_.end(), xlinks.begin(), xlinks.end());
   Logger::Trace("Updated interactors: %d objects, %d crosslinks, %d total",
@@ -712,6 +716,7 @@ void InteractionManager::Clear() {
     return;
   clist_.Clear();
   xlink_.Clear();
+  otrap_.Clear();
 }
 
 /* Only used during species insertion */
@@ -731,21 +736,34 @@ void InteractionManager::AddInteractors(std::vector<Object *> &ixs) {
 void InteractionManager::DrawInteractions(
     std::vector<graph_struct *> &graph_array) {
   xlink_.Draw(graph_array);
+  otrap_.Draw(graph_array);
 }
 
-void InteractionManager::WriteOutputs() { xlink_.WriteOutputs(); }
+void InteractionManager::WriteOutputs() {
+  xlink_.WriteOutputs();
+  otrap_.WriteOutputs();
+}
 
 void InteractionManager::InitOutputs(bool reading_inputs,
                                      run_options *run_opts) {
   xlink_.InitOutputs(reading_inputs, run_opts);
+  otrap_.InitOutputs(reading_inputs, run_opts);
 }
 
-void InteractionManager::ReadInputs() { xlink_.ReadInputs(); }
+void InteractionManager::ReadInputs() {
+  xlink_.ReadInputs();
+  otrap_.ReadInputs();
+}
 
 void InteractionManager::InitCrosslinkSpecies(sid_label &slab,
                                               ParamsParser &parser,
                                               unsigned long seed) {
   xlink_.InitSpecies(slab, parser, seed);
+}
+void InteractionManager::InitOpticalTrapSpecies(sid_label &slab,
+                                                ParamsParser &parser,
+                                                unsigned long seed) {
+  otrap_.InitSpecies(slab, parser, seed);
 }
 
 void InteractionManager::LoadCrosslinksFromCheckpoints(
@@ -756,6 +774,11 @@ void InteractionManager::LoadCrosslinksFromCheckpoints(
 }
 
 void InteractionManager::InsertCrosslinks() { xlink_.InsertCrosslinks(); }
+
+void InteractionManager::InsertOpticalTraps(
+    std::vector<SpeciesBase *> *species) {
+  otrap_.InsertOpticalTraps(species);
+}
 
 bool InteractionManager::CheckDynamicTimestep() {
   if (decrease_dynamic_timestep_) {

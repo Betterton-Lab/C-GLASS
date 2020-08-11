@@ -22,6 +22,7 @@ dynamic_timestep_ramp : [0.001, double]  # How quickly to return to default time
 graph_flag : [false, bool]           # Whether to run simulation with live graphics.
 n_graph : [1000, int]                # Number of simulation steps between refreshing graphics.
 graph_diameter : [0, double]         # If > 0, draws particles with a diameter of graph_diameter.
+object_opacity: [1, double]          # Sets opacity (alpha) for all sphero-like objects. 1.=opaque, 0.=invisible
 invert_background : [false, bool]    # If false, black background, otherwise white background.
 draw_boundary: [true, bool]          # If set to zero, does not draw system boundary conditions.
 load_checkpoint: [false, bool]       # Flag for reading checkpoint file corresponding to
@@ -343,3 +344,11 @@ crosslink:                          # Parameters specific to crosslinks.
                                     # Calculated using k_spring, rest_length. User input ignored.
   lut_grid_num: [256, int]          # Number of grid points used in one dimension of the the lookup table (LUT).
                                     # Total entries go as the square of this number e.g. 256 x 256
+optical_trap:
+  trap_spring: [1, double]          # Spring constant for optical trap, i.e. trap strength.
+  attach_species: [filament, string] # What species does the optical trap bind to.
+  trap_diameter: [4, double]          # Radius for graphically representing trap
+  bead_diameter: [2, double]          # Radius for graphically representing bead in trap
+  trap_color: [3.1416, double]      # Color for graphically representing trap
+  bead_color: [1.5708, double]      # Color for graphically representing bead in trap
+

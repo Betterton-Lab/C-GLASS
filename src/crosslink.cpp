@@ -370,6 +370,7 @@ void Crosslink::ReadSpec(std::fstream &ispec) {
     ispec.read(reinterpret_cast<char *>(&orientation_[i]), sizeof(double));
   }
   UpdatePeriodic();
+  //TODO: Need to set attached_mesh_id and rebind to mesh properly
   anchors_[0].ReadSpec(ispec);
   anchors_[1].ReadSpec(ispec);
   if (is_doubly) {

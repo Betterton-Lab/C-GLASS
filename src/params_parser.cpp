@@ -22,6 +22,9 @@ void ParamsParser::CheckDuplicateLabels() {
     if (species_id::_from_string(labels_[i].first.c_str()) ==
         +species_id::crosslink) {
       n_crosslinks_++;
+    } else if (species_id::_from_string(labels_[i].first.c_str()) ==
+               +species_id::optical_trap) {
+      n_optical_traps_++;
     } else {
       n_species_++;
     }
@@ -66,7 +69,7 @@ ParamsParser::GetNewSpeciesParameters(species_id sid, std::string spec_name) {
                 spec_name.c_str());
   for (auto it = species_node_.begin(); it != species_node_.end(); ++it) {
     if (it->first.as<std::string>().compare(sid_str) == 0) {
-      if (it->second.IsMap() && spec_name.compare("species") == 0){
+      if (it->second.IsMap() && spec_name.compare("species") == 0) {
         return parse_species_params(sid_str, it->second, sim_node_);
       } else if (it->second.IsSequence()) {
         for (int i = 0; i < it->second.size(); ++i) {

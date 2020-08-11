@@ -1244,7 +1244,7 @@ void Filament::CheckFlocking() {
 
 void Filament::Draw(std::vector<graph_struct *> &graph_array) {
   if (sparams_->curvature_cluster_analysis && cluster_ > 0) {
-    double color = sparams_->color + cluster_*0.1*M_PI*M_PI;
+    double color = sparams_->color + cluster_ * 0.1 * M_PI * M_PI;
     for (auto bond = bonds_.begin(); bond != bonds_.end(); ++bond) {
       bond->SetColor(color, draw_type::fixed);
     }

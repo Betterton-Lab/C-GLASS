@@ -13,6 +13,7 @@ Mesh::Mesh(unsigned long seed) : Object(seed) {
 
 void Mesh::InitMeshID() {
   std::lock_guard<std::mutex> lk(_mesh_mtx_);
+  printf("_next_mesh_id_ = %d\n", _next_mesh_id_);
   SetMeshID(++_next_mesh_id_);
 }
 

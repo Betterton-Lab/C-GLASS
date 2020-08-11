@@ -141,6 +141,12 @@
   default_config["crosslink"]["end_pausing"] = "false";
   default_config["crosslink"]["r_capture"] = "5";
   default_config["crosslink"]["lut_grid_num"] = "256";
+  default_config["optical_trap"]["trap_spring"] = "1";
+  default_config["optical_trap"]["attach_species"] = "filament";
+  default_config["optical_trap"]["trap_diameter"] = "4";
+  default_config["optical_trap"]["bead_diameter"] = "2";
+  default_config["optical_trap"]["trap_color"] = "3.1416";
+  default_config["optical_trap"]["bead_color"] = "1.5708";
   default_config["seed"] = "7859459105545";
   default_config["n_runs"] = "1";
   default_config["n_random"] = "1";
@@ -158,6 +164,7 @@
   default_config["graph_flag"] = "false";
   default_config["n_graph"] = "1000";
   default_config["graph_diameter"] = "0";
+  default_config["object_opacity"] = "1";
   default_config["invert_background"] = "false";
   default_config["draw_boundary"] = "true";
   default_config["load_checkpoint"] = "false";

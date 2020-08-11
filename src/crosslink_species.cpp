@@ -29,7 +29,6 @@ void CrosslinkSpecies::InitInteractionEnvironment(std::vector<Object *> *objs,
   lut_ = LookupTable(lut_filler_ptr);
   if (sparams_.use_binding_volume)
     lut_.setBindVol(lut_filler_ptr->getBindingVolume());
-  /* TODO: Add time testing right here <24-06-20, ARL> */
   TestKMCStepSize();
   delete lut_filler_ptr;
 }
@@ -39,7 +38,6 @@ void CrosslinkSpecies::InitInteractionEnvironment(std::vector<Object *> *objs,
  * \return void, will end program if dt is too high.
  */
 void CrosslinkSpecies::TestKMCStepSize() {
-  /* TODO: Make this acceptable for C-GLASS <24-06-20, ARL> */
   KMC<int> kmc_diag(params_->delta, &lut_);
 
   const double prob_thresh = 1e-4;

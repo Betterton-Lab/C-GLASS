@@ -406,6 +406,7 @@ void Anchor::ReadSpec(std::fstream &ispec) {
   }
   ispec.read(reinterpret_cast<char *>(&mesh_lambda_), sizeof(double));
   int attached_mesh_id = -1; // Just a place holder at the moment
+  //FIXME need to actually set this to have ReadSpec function properly
   ispec.read(reinterpret_cast<char *>(&attached_mesh_id), sizeof(int));
   UpdatePeriodic();
   if (active_)

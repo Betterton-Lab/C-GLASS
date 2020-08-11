@@ -210,6 +210,7 @@ void Object::Draw(std::vector<graph_struct *> &graph_array) {
   std::copy(scaled_position_, scaled_position_ + 3, g_.r);
   for (int i = space_->n_periodic; i < n_dim_; ++i) {
     g_.r[i] = position_[i];
+    printf("position_[i] = %f\n", position_[i]);
   }
   std::copy(orientation_, orientation_ + 3, g_.u);
   g_.color = color_;

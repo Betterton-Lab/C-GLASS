@@ -189,6 +189,18 @@ struct species_parameters<species_id::crosslink>
 };
 typedef species_parameters<species_id::crosslink> crosslink_parameters;
 
+template <>
+struct species_parameters<species_id::optical_trap>
+    : public species_base_parameters {
+  double trap_spring = 1;
+  std::string attach_species = "filament";
+  double trap_diameter = 4;
+  double bead_diameter = 2;
+  double trap_color = 3.1416;
+  double bead_color = 1.5708;
+};
+typedef species_parameters<species_id::optical_trap> optical_trap_parameters;
+
 struct system_parameters {
   long seed = 7859459105545;
   int n_runs = 1;
@@ -207,6 +219,7 @@ struct system_parameters {
   bool graph_flag = false;
   int n_graph = 1000;
   double graph_diameter = 0;
+  double object_opacity = 1;
   bool invert_background = false;
   bool draw_boundary = true;
   bool load_checkpoint = false;

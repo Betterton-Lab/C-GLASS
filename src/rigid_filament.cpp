@@ -147,8 +147,6 @@ void RigidFilament::Integrate() {
     // Update the orientation due to torques and random rotation
     AddRandomReorientation();
   }
-  // double f_mag = sqrt(dot_product(n_dim_, force_, force_));
-  // printf("f_mag = %f\n", f_mag);
 
   UpdatePeriodic();
   UpdateSitePositions();

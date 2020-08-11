@@ -8,7 +8,8 @@
 #endif
 #include "analysis.hpp"
 
-template <typename T, unsigned char S> class Species : public SpeciesBase {
+template <typename T, unsigned char S>
+class Species : public SpeciesBase {
 protected:
   std::vector<T> members_;
   species_parameters<S> sparams_;
@@ -69,6 +70,13 @@ public:
   virtual void ReadCheckpoints();
   virtual void ScalePositions();
   virtual const std::vector<T> &GetMembers() { return members_; }
+  /* XXX: Dangerous. This need to grab members from species_base ptr. 
+   *    If there is a better way, please let me know. <14-07-20, ARL> */
+  virtual void GetMemberPtrs(std::vector<Object *> &objs) {
+    for (auto &obj : members_) {
+      objs.push_back(&obj);
+    }
+  }
   virtual void CleanUp();
   virtual void Reserve();
   virtual double const GetVolume();
@@ -103,7 +111,8 @@ public:
   }
 };
 
-template <typename T, unsigned char S> double const Species<T, S>::GetVolume() {
+template <typename T, unsigned char S>
+double const Species<T, S>::GetVolume() {
   double vol = 0.0;
   for (auto it = members_.begin(); it != members_.end(); ++it) {
     vol += it->GetVolume();
@@ -111,13 +120,15 @@ template <typename T, unsigned char S> double const Species<T, S>::GetVolume() {
   return vol;
 }
 
-template <typename T, unsigned char S> void Species<T, S>::Reserve() {
+template <typename T, unsigned char S>
+void Species<T, S>::Reserve() {
   members_.reserve(GetNInsert());
   Logger::Debug("Reserving memory for %d members in %s %s", GetNInsert(),
                 GetSID()._to_string(), GetSpeciesName().c_str());
 }
 
-template <typename T, unsigned char S> void Species<T, S>::AddMember() {
+template <typename T, unsigned char S>
+void Species<T, S>::AddMember() {
   T newmember(rng_.GetSeed());
   Logger::Trace("Adding member to %s %s, member number %d, member id %d",
                 GetSID()._to_string(), GetSpeciesName().c_str(), n_members_ + 1,
@@ -128,7 +139,8 @@ template <typename T, unsigned char S> void Species<T, S>::AddMember() {
   n_members_++;
 }
 
-template <typename T, unsigned char S> double const Species<T, S>::GetDrMax() {
+template <typename T, unsigned char S>
+double const Species<T, S>::GetDrMax() {
   double max_dr = 0;
   for (auto it = members_.begin(); it != members_.end(); ++it) {
     double dr = it->GetDrTot();
@@ -145,7 +157,8 @@ template <typename T, unsigned char S> double const Species<T, S>::GetDrMax() {
   return max_dr;
 }
 
-template <typename T, unsigned char S> void Species<T, S>::ZeroDrTot() {
+template <typename T, unsigned char S>
+void Species<T, S>::ZeroDrTot() {
   for (auto it = members_.begin(); it != members_.end(); ++it) {
     it->ZeroDrTot();
   }
@@ -160,7 +173,8 @@ void Species<T, S>::ResetPreviousPositions() {
   }
 }
 
-template <typename T, unsigned char S> void Species<T, S>::AddMember(T newmem) {
+template <typename T, unsigned char S>
+void Species<T, S>::AddMember(T newmem) {
   Logger::Trace("Adding preexisting member to %s %s", GetSID()._to_string(),
                 GetSpeciesName().c_str());
   members_.push_back(newmem);
@@ -168,7 +182,8 @@ template <typename T, unsigned char S> void Species<T, S>::AddMember(T newmem) {
   n_members_++;
 }
 
-template <typename T, unsigned char S> void Species<T, S>::PopMember() {
+template <typename T, unsigned char S>
+void Species<T, S>::PopMember() {
   Logger::Trace("Removing last member of %s %s", GetSID()._to_string(),
                 GetSpeciesName().c_str());
   members_.back().Cleanup();
@@ -176,7 +191,8 @@ template <typename T, unsigned char S> void Species<T, S>::PopMember() {
   n_members_--;
 }
 
-template <typename T, unsigned char S> void Species<T, S>::PopAll() {
+template <typename T, unsigned char S>
+void Species<T, S>::PopAll() {
   while (n_members_ > 0) {
     PopMember();
   }
@@ -192,7 +208,8 @@ void Species<T, S>::Draw(std::vector<graph_struct *> &graph_array) {
   }
 }
 
-template <typename T, unsigned char S> void Species<T, S>::UpdatePositions() {
+template <typename T, unsigned char S>
+void Species<T, S>::UpdatePositions() {
   for (auto it = members_.begin(); it != members_.end(); ++it) {
     it->UpdatePosition();
   }
@@ -227,19 +244,22 @@ double Species<T, S>::GetPotentialEnergy() {
   return 0.5 * pe;
 }
 
-template <typename T, unsigned char S> void Species<T, S>::ZeroForces() {
+template <typename T, unsigned char S>
+void Species<T, S>::ZeroForces() {
   for (auto it = members_.begin(); it != members_.end(); ++it) {
     it->ZeroForce();
   }
 }
 
-template <typename T, unsigned char S> void Species<T, S>::Report() {
+template <typename T, unsigned char S>
+void Species<T, S>::Report() {
   for (auto it = members_.begin(); it != members_.end(); ++it) {
     it->Report();
   }
 }
 
-template <typename T, unsigned char S> int Species<T, S>::GetCount() {
+template <typename T, unsigned char S>
+int Species<T, S>::GetCount() {
   int count = 0;
   for (auto it = members_.begin(); it != members_.end(); ++it) {
     count += it->GetCount();
@@ -247,21 +267,24 @@ template <typename T, unsigned char S> int Species<T, S>::GetCount() {
   return count;
 }
 
-template <typename T, unsigned char S> void Species<T, S>::WritePosits() {
+template <typename T, unsigned char S>
+void Species<T, S>::WritePosits() {
   int size = members_.size();
   oposit_file_.write(reinterpret_cast<char *>(&size), sizeof(int));
   for (auto it = members_.begin(); it != members_.end(); ++it)
     it->WritePosit(oposit_file_);
 }
 
-template <typename T, unsigned char S> void Species<T, S>::WriteSpecs() {
+template <typename T, unsigned char S>
+void Species<T, S>::WriteSpecs() {
   int size = members_.size();
   ospec_file_.write(reinterpret_cast<char *>(&size), sizeof(int));
   for (auto it = members_.begin(); it != members_.end(); ++it)
     it->WriteSpec(ospec_file_);
 }
 
-template <typename T, unsigned char S> void Species<T, S>::WriteCheckpoints() {
+template <typename T, unsigned char S>
+void Species<T, S>::WriteCheckpoints() {
   Logger::Trace("Writing checkpoints for %s %s", GetSID()._to_string(),
                 GetSpeciesName().c_str());
   std::fstream ocheck_file(checkpoint_file_, std::ios::out | std::ios::binary);
@@ -283,7 +306,8 @@ template <typename T, unsigned char S> void Species<T, S>::WriteCheckpoints() {
   ocheck_file.close();
 }
 
-template <typename T, unsigned char S> void Species<T, S>::ReadPosits() {
+template <typename T, unsigned char S>
+void Species<T, S>::ReadPosits() {
   if (iposit_file_.eof()) {
     Logger::Info("EOF reached while reading posits");
     early_exit = true;
@@ -319,7 +343,8 @@ void Species<T, S>::ReadPositsFromSpecs() {
   }
 }
 
-template <typename T, unsigned char S> void Species<T, S>::ReadCheckpoints() {
+template <typename T, unsigned char S>
+void Species<T, S>::ReadCheckpoints() {
   Logger::Trace("Reading checkpoints for %s %s", GetSID()._to_string(),
                 GetSpeciesName().c_str());
   std::fstream icheck_file(checkpoint_file_, std::ios::in | std::ios::binary);
@@ -349,7 +374,8 @@ template <typename T, unsigned char S> void Species<T, S>::ReadCheckpoints() {
   Object::SetNextOID(next_oid);
 }
 
-template <typename T, unsigned char S> void Species<T, S>::ReadSpecs() {
+template <typename T, unsigned char S>
+void Species<T, S>::ReadSpecs() {
   if (ispec_file_.eof()) {
     if (HandleEOF()) {
       return;
@@ -389,16 +415,19 @@ template <typename T, unsigned char S> void Species<T, S>::ReadSpecs() {
     it->ReadSpec(ispec_file_);
 }
 
-template <typename T, unsigned char S> void Species<T, S>::ScalePositions() {
+template <typename T, unsigned char S>
+void Species<T, S>::ScalePositions() {
   for (auto it = members_.begin(); it != members_.end(); ++it)
     it->ScalePosition();
 }
 
-template <typename T, unsigned char S> void Species<T, S>::CleanUp() {
+template <typename T, unsigned char S>
+void Species<T, S>::CleanUp() {
   members_.clear();
 }
 
-template <typename T, unsigned char S> void Species<T, S>::ArrangeMembers() {
+template <typename T, unsigned char S>
+void Species<T, S>::ArrangeMembers() {
   if (GetInsertionType().compare("custom") == 0)
     CustomInsert();
   else if (GetInsertionType().compare("simple_crystal") == 0)
@@ -444,10 +473,10 @@ void Species<T, S>::CrystalArrangement() {
   double nZ_max = (n_dim == 3 ? nX_max : 1);
   double N = nX_max * nY_max * nZ_max;
   if (n_members_ > N) {
-    Logger::Error(
-        "Number of members in species exceeds maximum possible for crystal in "
-        "system radius! Max possible: %d",
-        (int)N);
+    Logger::Error("Number of members in species exceeds maximum possible for "
+                  "crystal in "
+                  "system radius! Max possible: %d",
+                  (int)N);
   }
   double fraction = N / n_members_;
   if (fraction < 1)
@@ -525,7 +554,8 @@ void Species<T, S>::CrystalArrangement() {
   }
 }
 
-template <typename T, unsigned char S> void Species<T, S>::CustomInsert() {
+template <typename T, unsigned char S>
+void Species<T, S>::CustomInsert() {
   YAML::Node inode;
   std::string spec_name = GetSID()._to_string();
   try {

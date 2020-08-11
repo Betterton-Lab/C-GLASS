@@ -6,6 +6,7 @@
 #include "cell_list.hpp"
 #include "crosslink_manager.hpp"
 #include "minimum_distance.hpp"
+#include "optical_trap_manager.hpp"
 #include "potential_manager.hpp"
 #include "species.hpp"
 #include "struct_analysis.hpp"
@@ -13,7 +14,7 @@
 typedef std::vector<Interaction>::iterator ix_iterator;
 
 class InteractionManager {
- private:
+private:
   double stress_[9];
   double dr_update_;
   bool overlap_;
@@ -45,6 +46,7 @@ class InteractionManager {
   CellList clist_;
   PotentialManager potentials_;
   CrosslinkManager xlink_;
+  OpticalTrapManager otrap_;
 
   const bool CheckSpeciesInteractorUpdate() const;
   void CheckUpdateXlinks();
@@ -69,7 +71,7 @@ class InteractionManager {
   void ApplyInteractions();
   void CalculateInteractions();
 
- public:
+public:
   InteractionManager() {}
   void Init(system_parameters *params, std::vector<SpeciesBase *> *species,
             space_struct *space, bool processing = false);
@@ -94,9 +96,12 @@ class InteractionManager {
   void ResetCellList();
   void InitCrosslinkSpecies(sid_label &slab, ParamsParser &parser,
                             unsigned long seed);
+  void InitOpticalTrapSpecies(sid_label &slab, ParamsParser &parser,
+                              unsigned long seed);
+  void InsertCrosslinks();
+  void InsertOpticalTraps(std::vector<SpeciesBase *> *species);
   void LoadCrosslinksFromCheckpoints(std::string run_name,
                                      std::string checkpoint_run_name);
-  void InsertCrosslinks();
   void SetInteractionAnalysis(bool set) { run_interaction_analysis_ = set; }
 };
 

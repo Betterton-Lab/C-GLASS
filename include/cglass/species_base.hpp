@@ -36,6 +36,7 @@ public:
   virtual double GetPotentialEnergy() { return 0; }
   virtual void ScalePositions() {}
   virtual void AddMember() {}
+  virtual void GetMemberPtrs(std::vector<Object *> &objs) {}
   virtual void SetLastMemberPosition(double const *const pos) {}
   virtual void ResetPreviousPositions() {}
   virtual void PopMember() {}
