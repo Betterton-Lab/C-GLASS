@@ -7,7 +7,6 @@ void CrosslinkSpecies::Init(std::string spec_name, ParamsParser &parser) {
   Species::Init(spec_name, parser);
   k_on_ = sparams_.k_on_s;
   bind_site_density_ = sparams_.bind_site_density;
-  begin_with_bound_crosslinks_ = sparams_.begin_with_bound_crosslinks;
   xlink_concentration_ = sparams_.concentration;
   infinite_reservoir_flag_ = sparams_.infinite_reservoir_flag;
   sparams_.num = (int)round(sparams_.concentration * space_->volume);
@@ -213,22 +212,6 @@ void CrosslinkSpecies::InsertCrosslinks() {
   } else {
     Logger::Error("Insertion type %s not implemented yet for crosslinks",
                   sparams_.insertion_type.c_str());
-  }
-}
-
-//Adds in Crosslinkers for begin_with_bound_crosslinks flag
-void CrosslinkSpecies::InsertAttachedCrosslinksSpecies() {
-  if (begin_with_bound_crosslinks_<=0) {
-    return;
-  }
-  Crosslink xlink(rng_.GetSeed());
-  xlink.Init(&sparams_);
-  xlink.InitInteractionEnvironment(&lut_);
-  xlink.SetSID(GetSID());
-  members_.resize(begin_with_bound_crosslinks_, xlink);
-  UpdateBoundCrosslinks();
-  for (int i=0; i < begin_with_bound_crosslinks_; ++i) {
-    BindCrosslink();
   }
 }
 

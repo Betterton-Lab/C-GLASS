@@ -136,8 +136,10 @@ rigid_filament:
                                        # will never physically overlap if they do not begin overlapping.
                                        # This only works for two filaments. Warning will be thrown otherwise.
   packing_fraction: [-1, double]    # if num > 0, and packing fraction > 0, filaments are inserted
-  #                                  # until the ratio filament to system volumes match this value.
-  n_equil: [0, int]                 # internal filament parameter used for shuffling.
+                                     # until the ratio filament to system volumes match this value.
+  n_equil: [0, int]                  # internal filament parameter used for shuffling.
+  pseudo1D: [false, bool]            # with pseudo1D on the filaments won't rotate and  
+				     # will only move in the y direction
 
 filament:                            # Parameters unique to filament class of objects.
   packing_fraction: [-1, double]    # if num > 0, and packing fraction > 0, filaments are inserted
@@ -295,8 +297,6 @@ crosslink:                          # Parameters specific to crosslinks.
                                     # Units in #/area or #/vol in 2D or 3D for free xlinks. In
                                     # #/area for grid spacing. In #/length or #/area for 2D or 3D
                                     # boundaries.
-  begin_with_bound_crosslinks: [0, int]   # if greater than 0 the simultion begins with the specified number
-                                    # of crosslinkers singly attached to microtubules
   use_binding_volume: [true, bool]  # Calculate concentration of unbound head of 
                                     # singly bound protein by finding a binding 
                                     # volume in which it is statistically likely

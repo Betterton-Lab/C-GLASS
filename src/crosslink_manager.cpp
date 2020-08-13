@@ -75,12 +75,6 @@ void CrosslinkManager::InsertCrosslinks() {
   }
 }
 
-void CrosslinkManager::InsertAttachedCrosslinks() {
-  for (auto it = xlink_species_.begin(); it != xlink_species_.end(); ++it) {
-    (*it)->InsertAttachedCrosslinksSpecies();
-  }
-}
-
 void CrosslinkManager::Clear() {
   output_mgr_.Close();
   for (auto it = xlink_species_.begin(); it != xlink_species_.end(); ++it) {

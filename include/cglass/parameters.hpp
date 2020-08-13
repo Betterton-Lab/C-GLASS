@@ -33,21 +33,23 @@ struct species_parameters<species_id::rigid_filament>
   bool constrain_motion_flag = false;
   double packing_fraction = -1;
   int n_equil = 0;
+  bool pseudo1D = false;
 };
 typedef species_parameters<species_id::rigid_filament> rigid_filament_parameters;
 
 template <>
 struct species_parameters<species_id::filament>
     : public species_base_parameters {
-  bool randomize_intrinsic_curvature_handedness = false;
   double persistence_length = 400;
+  bool force_induced_catastrophe_flag = false;
   double packing_fraction = -1;
+  bool randomize_intrinsic_curvature_handedness = false;
+  double flock_color_int = 1.57;
   double perlen_ratio = -1;
   bool polydispersity_flag = false;
   double max_length = 500;
   double min_length = 5;
   double min_bond_length = 1.5;
-  double flock_color_ext = 4.71;
   double driving_factor = 0;
   int n_equil = 0;
   bool nematic_driving = false;
@@ -83,8 +85,7 @@ struct species_parameters<species_id::filament>
   double flock_polar_min = 0.5;
   double flock_contact_min = 0.5;
   bool highlight_flock = false;
-  double flock_color_int = 1.57;
-  bool force_induced_catastrophe_flag = false;
+  double flock_color_ext = 4.71;
   bool number_fluctuation_analysis = false;
   int number_fluctuation_boxes = 6;
   int number_fluctuation_centers = 10;
@@ -157,8 +158,9 @@ typedef species_parameters<species_id::spindle> spindle_parameters;
 template <>
 struct species_parameters<species_id::crosslink>
     : public species_base_parameters {
+  double k_spring = 10;
   double concentration = 0;
-  int begin_with_bound_crosslinks = 0;
+  double polar_affinity = 1;
   bool use_binding_volume = true;
   bool infinite_reservoir_flag = false;
   double bind_site_density = 1;
@@ -170,11 +172,9 @@ struct species_parameters<species_id::crosslink>
   double k_on_s = 10;
   double k_off_s = 2;
   double k_on_d = 10;
-  double k_spring = 10;
   double k_off_d = 2;
   double energy_dep_factor = 0;
   double force_dep_length = 0;
-  double polar_affinity = 1;
   double k_spring_compress = -1.;
   double f_stall = 100;
   bool force_dep_vel_flag = true;

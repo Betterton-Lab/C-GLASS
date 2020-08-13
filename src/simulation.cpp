@@ -451,12 +451,12 @@ void Simulation::InsertSpecies(bool force_overlap, bool processing) {
     ix_mgr_.LoadCrosslinksFromCheckpoints(run_name_,
                                           params_.checkpoint_run_name);
   }
+
   ix_mgr_.ResetCellList(); // Forces rebuild cell list without redundancy
   ix_mgr_.Reset();
   // if (!processing) {
   ix_mgr_.CheckUpdateObjects(); // Forces update as well
-  //}  
-  ix_mgr_.InsertAttachedCrosslinks();
+  //}
 }
 
 /* Tear down data structures, e.g. cell lists, and close graphics window if
