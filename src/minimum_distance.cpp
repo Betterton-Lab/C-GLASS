@@ -710,7 +710,8 @@ void MinimumDistance::PointProtrusionBC(double const *const r, double *dr,
     //We are outside if distance from axis is greater than protrusion radius
     double dis_from_end = r[0] + pro_dis_cen + space_ -> pro_length;
     double dis_from_edge = space_ -> pro_radius - dis_pro_axis;
-    //Logger::Info("edge distance, %f, end distance %f", dis_from_edge, dis_from_end);
+    double end_of_pro = pro_dis_cen + space_ -> pro_length;
+    //Logger::Info("end of protrusion at , %f",end_of_pro);
     //closer to edge than end
     if (dis_from_edge < dis_from_end) {
 			double dl = (space_->pro_radius)/(dis_pro_axis)-1;

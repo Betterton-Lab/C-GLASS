@@ -10,14 +10,15 @@ bool CellList::_no_init_ = true;
 void CellList::SetMinCellLength(double l) {
   if (l > _min_cell_length_) {
     Logger::Debug("Setting minimum cell length to be %2.2f", l);
-    _min_cell_length_ = 3.75580*1.5; //l;
+    //_min_cell_length_ = 3.75580*1.5; //l;
+    _min_cell_length_ = l;
   }
   
 }
-double CellList::GetCellLength() { return 3.75*1.5; /*_cell_length_;*/ }
+double CellList::GetCellLength() { return _cell_length_; }
 
 void CellList::Init(int n_dim, int n_periodic, double system_radius) {
-  _n_cells_1d_ = 14; //(int)floor(2 * system_radius / _min_cell_length_);
+  _n_cells_1d_ = 1; //(int)floor(2 * system_radius / _min_cell_length_);
   //_n_cells_1d_ = (int)floor(240 / _min_cell_length_);
   Logger::Info("Number of cells %i", _n_cells_1d_);
   _no_init_ = false;
@@ -52,7 +53,7 @@ void CellList::Init(int n_dim, int n_periodic, double system_radius) {
     Logger::Warning("Cell list initialized with 3 cells or fewer. Calculating"
                     " all-pair interactions");
     // Fewer than three cells will have equivalent behavior
-    _n_cells_1d_ = 3;
+    _n_cells_1d_ = 1;
   } else if (_n_cells_1d_ <= 2) {
     /* If we do not have periodic BCs, this warning should only apply when we
        have 2 cells per side*/

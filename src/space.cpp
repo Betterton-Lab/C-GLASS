@@ -87,7 +87,10 @@ void Space::Init(system_parameters *params) {
       } else {
         pro_length_ = 0;
       }
-      Logger::Info("Radius set to %f, length set to %f", pro_radius_, pro_length_);
+      if (pro_radius_ > 0) {
+        pro_length_= radius_ - sqrt(SQR(radius_)-SQR(pro_radius_));
+      }
+      //Logger::Info("Radius set to %f, length set to %f", pro_radius_, pro_length_);
   }
   InitUnitCell();
   CalculateVolume();

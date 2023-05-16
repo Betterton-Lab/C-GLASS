@@ -12,7 +12,7 @@ void CrosslinkSpecies::Init(std::string spec_name, ParamsParser &parser) {
   begin_with_bound_crosslinks_ = sparams_.begin_with_bound_crosslinks;
   xlink_concentration_ = sparams_.concentration;
   infinite_reservoir_flag_ = sparams_.infinite_reservoir_flag;
-  sparams_.num = 39.38; //(int)round(sparams_.concentration * space_->volume);
+  sparams_.num = 174; //(int)round(sparams_.concentration * space_->volume);
   std::vector<std::string> bind_file = {sparams_.anchors[0].bind_file, sparams_.anchors[1].bind_file};
   
   // Create a default set of specific binding parameters
@@ -229,7 +229,7 @@ void CrosslinkSpecies::InsertCrosslinks() {
         sparams_.num = (int)round(4 * space_->radius * space_->radius *
                                   xlink_concentration_);
       } else if (space_->type == +boundary_type::sphere || space_->type == +boundary_type::protrusion) {
-        sparams_.num = 39; //(int)round(4/3 * M_PI * space_->radius * space_->radius * space_->radius *
+        sparams_.num = 174; //(int)round(4/3 * M_PI * space_->radius * space_->radius * space_->radius *
                                   //xlink_concentration_);
         Logger::Info("Inserting %i crosslinks", sparams_.num);
       } else if (space_->type == +boundary_type::budding) {

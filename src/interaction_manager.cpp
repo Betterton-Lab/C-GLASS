@@ -35,11 +35,11 @@ void InteractionManager::InitInteractions() {
   if (processing_ && !run_interaction_analysis_) {
     return;
   }
-  CellList::SetMinCellLength(xlink_.GetRCutoff());
-  Logger::Info("Min cell length set to %f from xlink",xlink_.GetRCutoff());
+  //CellList::SetMinCellLength(xlink_.GetRCutoff());
+  //Logger::Info("Min cell length set to %f from xlink",xlink_.GetRCutoff());
   potentials_.InitPotentials(params_);
-  CellList::SetMinCellLength(sqrt(potentials_.GetRCut2()));
-  Logger::Info("Min cell length set to %f from potentials",sqrt(potentials_.GetRCut2()));
+  //CellList::SetMinCellLength(sqrt(potentials_.GetRCut2()));
+  //Logger::Info("Min cell length set to %f from potentials",sqrt(potentials_.GetRCut2()));
   CellList::Init(params_->n_dim, params_->n_periodic, params_->system_radius);
   Logger::Info("Constructing cell list data structure");
   clist_.BuildCellList();

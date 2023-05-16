@@ -269,16 +269,20 @@ void RigidFilament::UpdatePosition() {
   }
   if (!params_->on_midstep && !sparams_->stationary_flag && (sparams_->stationary_until)<eq_steps_count_)
     Integrate();
+  //Logger::Info()
   eq_steps_count_++;
 
-  if (.5*eq_steps_count_>sparams_->start_growth && position_[0]>sparams_->end_point){
+  if (.5*eq_steps_count_ > sparams_->start_growth && position_[0] > sparams_->end_point && sparams_->start_growth != 0){
    position_[0] += .5*(sparams_->growth_speed)*params_->delta;
    UpdatePeriodic();
    UpdateSitePositions();
    UpdateBondPositions();
-   //Logger::Info("New pos set");
+   double end_of_tube = position_[0]-.5*length_;
+   //Logger::Info("Microtubule end at, %f, eq steps, %i, start_growth, %f, x, %f, end_point, %f ", end_of_tube,eq_steps_count_, sparams_->start_growth, position_[0], sparams_->end_point);
     
   }
+   //Logger::Info("Outsuide loop,  eq steps, %i, start_growth, %f, x, %f, end_point, %f ", eq_steps_count_, sparams_->start_growth, position_[0], sparams_->end_point);
+   //Logger::Info("");
   //if(eq_steps_count_==200 || eq_steps_count_==400){
   //Logger::Info("time is %i, filament position is %f", eq_steps_count_, position_[0]);
   //}

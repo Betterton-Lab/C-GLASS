@@ -97,6 +97,53 @@ void Crosslink::FreeKMC () {
     }
     //for (int i = 0; i < sphere_nbr_list.size(); ++i){
     //  Logger::Info("for i = %i prob_list is %f", i, prob_list[i]);
+    //}    
+   const std::vector<const Rod*>& rod_nbr_list = anchors_[0].GetNeighborListMemRods();
+
+    for (int i = 0; i < rod_nbr_list.size(); ++i) {
+
+      //Interaction ix(&anchors_[0], sphere_nbr_list[i]);
+      double const *const anchor_pos = anchors_[0].GetPosition();
+      double const *const rod_pos = rod_nbr_list[i]->GetPosition();
+      //double const rod_length = rod_nbr_list[i]->GetLength();
+      Rod *bind_obj = anchors_[0].GetRodNeighbor(i);
+      double obj_length = bind_obj->GetLength();
+
+      double perp_distance_sq = 0;
+      for (int i = 1; i < params_->n_dim; ++i) {
+        perp_distance_sq += SQR(anchor_pos[i]-rod_pos[i]);
+      } 
+      double perp_distance = sqrt(perp_distance_sq);
+      double prob_factor = 0;
+      rest_length_=1.56;
+      if (perp_distance <= .5*rest_length_) {
+        if (anchor_pos[0]<=(rod_pos[0]-.5*obj_length-.5*rest_length_) || anchor_pos[0]>=(rod_pos[0]+.5*obj_length+.5*rest_length_) ) {
+          prob_factor=0;
+        }
+        else if (anchor_pos[0]>=(rod_pos[0]-.5*obj_length+.5*rest_length_) || anchor_pos[0]<=(rod_pos[0]+.5*obj_length+.5*rest_length_) ) {
+	  double length_in_sphere=2*sqrt(SQR(.5*rest_length_)-SQR(perp_distance));
+	  prob_factor=length_in_sphere*sparams_->f_to_s_factor*delta_;
+        }
+	else if (anchor_pos[0]<=(rod_pos[0]-.5*obj_length+.5*rest_length_) || anchor_pos[0]>=(rod_pos[0]-.5*obj_length-.5*rest_length_) ) {
+	  double sphere_rod_int=anchor_pos[0]+sqrt(SQR(.5*rest_length_)-SQR(perp_distance));
+	  double end_of_rod=rod_pos[0]-.5*obj_length;
+	  double length_in_sphere=sphere_rod_int-end_of_rod;
+	  prob_factor=length_in_sphere*sparams_->f_to_s_factor*delta_;
+        }
+	else if (anchor_pos[0]>=(rod_pos[0]+.5*obj_length-.5*rest_length_) || anchor_pos[0]<=(rod_pos[0]+.5*obj_length+.5*rest_length_) ) {
+ 	  double sphere_rod_int=anchor_pos[0]-sqrt(SQR(.5*rest_length_)-SQR(perp_distance));
+	  double end_of_rod=rod_pos[0]+.5*obj_length;
+	  double length_in_sphere=end_of_rod-sphere_rod_int;
+	  prob_factor=length_in_sphere*sparams_->f_to_s_factor*delta_;
+       }
+      }
+      rest_length_=3.12;
+      total_bind_prop+=prob_factor;
+      prob_list.push_back(prob_factor);
+      //Logger::Info("prob_factor is %f", prob_list[i]);
+    }
+    //for (int i = 0; i < sphere_nbr_list.size(); ++i){
+    //  Logger::Info("for i = %i prob_list is %f", i, prob_list[i]);
     //}
     
     //Logger::Info("total bind prop is %f, roll is %f", total_bind_prop, roll);
@@ -125,10 +172,39 @@ void Crosslink::FreeKMC () {
            //Logger::Info("In else, prob is %f", prob_list[i]);
            roll -= prob_list[i];}
       }
+
+      for (int i = 0; i < rod_nbr_list.size(); ++i) {
+        //Logger::Warning(" i is %i total bind prop is %f, roll is %f", i, total_bind_prop, roll);
+        if(prob_list[i]>=roll) {
+          //Bind
+          Rod *bind_obj = anchors_[0].GetRodNeighbor(i);
+          double obj_length = bind_obj->GetLength();
+          /* KMC returns bind_lambda to be with respect to center of rod. We want 
+          it to be specified from the tail of the rod to be consistent */
+          double const *const anchor_pos = anchors_[0].GetPosition();
+          double const *const rod_pos = rod_nbr_list[i]->GetPosition();         
+          double bind_lambda = anchor_pos[0]-rod_pos[0];
+	  bind_lambda+=.5*obj_length; 
+          /* KMC can return values that deviate a very small amount from the true 
+          rod length. Bind to ends if lambda < 0 or lambda > bond_length. */
+          if (bind_lambda > obj_length) {
+            bind_lambda = obj_length;
+          } else if (bind_lambda < 0) {
+            bind_lambda = 0;
+          }
+          anchors_[0].AttachObjLambda(bind_obj, bind_lambda);
+          SetSingly(0);
+          Logger::Trace("Crosslink %d became doubly bound to obj %d", GetOID(),
+                  bind_obj->GetOID());
+
+          return;
+        }
+        else{
+           //Logger::Info("In else, prob is %f", prob_list[i]);
+           roll -= prob_list[i];}
+      }
     }
-    //Logger::Info("total prop is %f", total_bind_prop);
-    
-   
+      
 } 
 /* Perform kinetic monte carlo step of protein with 1 head attached. */
 void Crosslink::SinglyKMC() {
@@ -261,12 +337,14 @@ void Crosslink::SinglyKMC() {
       } else if (bind_lambda < 0) {
         bind_lambda = 0;
       }
-      Logger::Info("Befroe");
+      //Logger::Info("Befroe");
       anchors_[(int)!bound_anchor_].AttachObjLambda(bind_obj, bind_lambda);
-      Logger::Info("After");
+      //Logger::Info("After");
       SetDoubly();
       Logger::Trace("Crosslink %d became doubly bound to obj %d", GetOID(),
                   bind_obj->GetOID());
+      Logger::Info("Crosslinks bound with heads at x %f and y %f and x %f and y %f",anchors_[0].GetPosition()[2], anchors_[0].GetPosition()[1], anchors_[1].GetPosition()[2], anchors_[1].GetPosition()[1]);
+ 
     } else {
       Sphere *bind_obj = anchors_[bound_anchor_].GetSphereNeighbor(i_bind - n_neighbors_rod);
       (*bound_curr_)[bind_obj].first.push_back(kmc_bind.getProb(i_bind));
@@ -278,6 +356,7 @@ void Crosslink::SinglyKMC() {
       (*bound_curr_)[bind_obj].second.push_back(anchor_and_bind_type);
       Logger::Trace("Crosslink %d, with anchor %d, became doubly bound to obj %d", GetOID(), anchors_[(int)!bound_anchor_].GetOID(),
                   bind_obj->GetOID());
+      Logger::Info("Crosslinks bound with heads at %f and %f",anchors_[0].GetPosition(), anchors_[1].GetPosition());
       //Logger::Info("single to double");
 
       //If crosslinkers can't cross check if newly bound crosslinker is crossing
@@ -939,7 +1018,7 @@ void Crosslink::InsertFree(double const *const new_pos, double const *const u) {
     position_[1] = 0;
     position_[2] = 0;
     no_move = true;
-    Logger::Info("In loop");
+    //Logger::Info("In loop");
     return;
   } else {
     for (int i = 0; i < params_->n_dim; ++i) {

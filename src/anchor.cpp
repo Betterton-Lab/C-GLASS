@@ -688,9 +688,9 @@ void Anchor::AttachObjLambda(Object *o, double lambda) {
   /* Distance anchor is relative to entire mesh length */
   mesh_lambda_ = bond_->GetMeshLambda() + bond_lambda_;
   SetCompID(rod_->GetCompID());
-  Logger::Info("5");
+  //Logger::Info("5");
   UpdateAnchorPositionToObj();
-  Logger::Info("6");
+  //Logger::Info("6");
   ZeroDrTot();
   bound_ = true;
 }
@@ -756,9 +756,9 @@ void Anchor::AttachObjMeshLambda(Object *o, double mesh_lambda) {
   bound_ = true;
   mesh_lambda_ = mesh_lambda;
   mesh_n_bonds_ = -1;
-  Logger::Info("Mesh 1");
+  //Logger::Info("Mesh 1");
   UpdateAnchorPositionToMesh();
-  Logger::Info("Mesh 2");
+  //Logger::Info("Mesh 2");
   if (!bound_) {
     Logger::Error(
         "Updating anchor to mesh from checkpoint resulted in an unbound "
