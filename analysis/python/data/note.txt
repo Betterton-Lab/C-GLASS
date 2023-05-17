@@ -1,0 +1,1 @@
+Put data that you want turned into fluorescence images in this folder. Fluorescence images will also be outputed to this folder.
