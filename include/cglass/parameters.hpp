@@ -170,6 +170,7 @@ struct species_parameters<species_id::crosslink>
   bool use_number = false;
   int begin_with_bound_crosslinks = 0;
   bool begin_double_bound = false;
+  int Add_at = 0;
   bool no_binding = false;
   bool no_solution_binding = false;
   bool use_binding_volume = true;
@@ -182,6 +183,7 @@ struct species_parameters<species_id::crosslink>
   double diffusion_free = 0;
   double energy_dep_factor = 0;
   double force_dep_length = 0;
+  bool motor_off = false;
   double polar_affinity = 1;
   double k_spring = 10;
   double k_spring_compress = -1.;
@@ -293,6 +295,8 @@ struct system_parameters {
   bool static_particle_number = false;
   bool checkpoint_from_spec = false;
   std::string potential = "wca";
+  double wham_mag = 0;
+  double wham_cen = 0;
   bool reflect_at_boundary = false;
   double soft_potential_mag = 10;
   double soft_potential_mag_target = -1;

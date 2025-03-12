@@ -7,7 +7,7 @@
 
 class WCAPotential : public PotentialBase {
 protected:
-  double eps_, sigma_, c12_, c6_, shift_;
+  double eps_, sigma_, c12_, c6_, shift_, wham_mag_, wham_cen_;
 
 public:
   WCAPotential() {}
@@ -25,16 +25,23 @@ public:
     for (int i = 0; i < n_dim_; ++i) {
       ix.force[i] = ffac * dr[i] * rinv;
     }
+    if (wham_mag_!=0) {
+     ix.force[1] += -wham_mag_*(-dr[1]-wham_cen_);
+     //printf("adding wham %f, %f, %f, \n", wham_mag_, dr[1], wham_cen_);
+    }
+
     for (int i = 0; i < n_dim_; ++i)
       for (int j = 0; j < n_dim_; ++j)
         ix.stress[n_dim_ * i + j] = -dr[i] * ix.force[j];
-    ix.pote = r6 * (c12_ * r6 - c6_) + eps_;
+        ix.pote = r6 * (c12_ * r6 - c6_) + eps_+0.5*wham_mag_*(dr[1]-wham_cen_)*(dr[1]-wham_cen_);
   }
 
   void InitPotentialParams(system_parameters *params) {
     // Initialize potential params
     eps_ = params->wca_eps;
     sigma_ = params->wca_sig;
+    wham_mag_ = params->wham_mag;
+    wham_cen_ = params->wham_cen;
 
     // For WCAPotential potentials, the rcutoff is
     // restricted to be at 2^(1/6)sigma

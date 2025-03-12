@@ -136,6 +136,10 @@ system_parameters parse_system_params(YAML::Node &node) {
     params.checkpoint_from_spec = it->second.as<bool>();
     } else if (param_name.compare("potential")==0) {
     params.potential = it->second.as<std::string>();
+    } else if (param_name.compare("wham_mag")==0) {
+    params.wham_mag = it->second.as<double>();
+    } else if (param_name.compare("wham_cen")==0) {
+    params.wham_cen = it->second.as<double>();
     } else if (param_name.compare("reflect_at_boundary")==0) {
     params.reflect_at_boundary = it->second.as<bool>();
     } else if (param_name.compare("soft_potential_mag")==0) {
@@ -715,6 +719,8 @@ species_base_parameters *parse_species_params(std::string sid,
       params.begin_with_bound_crosslinks = jt->second.as<int>();
       } else if (param_name.compare("begin_double_bound")==0) {
       params.begin_double_bound = jt->second.as<bool>();
+      } else if (param_name.compare("Add_at")==0) {
+      params.Add_at = jt->second.as<int>();
       } else if (param_name.compare("no_binding")==0) {
       params.no_binding = jt->second.as<bool>();
       } else if (param_name.compare("no_solution_binding")==0) {
@@ -739,6 +745,8 @@ species_base_parameters *parse_species_params(std::string sid,
       params.energy_dep_factor = jt->second.as<double>();
       } else if (param_name.compare("force_dep_length")==0) {
       params.force_dep_length = jt->second.as<double>();
+      } else if (param_name.compare("motor_off")==0) {
+      params.motor_off = jt->second.as<bool>();
       } else if (param_name.compare("polar_affinity")==0) {
       params.polar_affinity = jt->second.as<double>();
       } else if (param_name.compare("k_spring")==0) {

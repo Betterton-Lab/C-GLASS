@@ -30,6 +30,8 @@ private:
   double rcapture_;
   double bind_site_density_;
   double tether_force_;
+  double off_calc_fx_;
+  double off_calc_fy_;
   double e_dep_factor_;
   double fdep_length_;
   double polar_affinity_;
@@ -52,7 +54,7 @@ private:
   void UpdateXlinkState();
   double *obj_size_ = nullptr;
   Tracker *tracker_ = nullptr;
- bool* global_check_for_cross_ = nullptr;
+  bool* global_check_for_cross_ = nullptr;
 
 public:
   Crosslink(unsigned long seed);
@@ -69,6 +71,7 @@ public:
   void UpdateCrosslinkPositions();
   void GetAnchors(std::vector<Object *> &ixors);
   std::vector<double> GetAnchorS();
+  bool StillDBound();
   std::vector<int> GetReceptorPCIDs();
   int GetLastBound();
   bool ReturnCheckForCross();

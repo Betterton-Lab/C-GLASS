@@ -223,12 +223,12 @@ void Crosslink::SinglyKMC() {
     kmc_bind.LUCalcTotProbsSD(anchors_[bound_anchor_].GetNeighborListMemRods(), 
                               anchors_[bound_anchor_].GetNeighborListMemSpheres(), 
                               anchors_[bound_anchor_].GetBoundOID(), bind_factors); 
+
     kmc_bind_prob = kmc_bind.getTotProb();
     tracker_->TrackSD(kmc_bind_prob);
   } 
   // Find out whether we bind, unbind, or neither.
   int head_activate = choose_kmc_double(unbind_prob, kmc_bind_prob, roll);
-  
   // Change status of activated head
   if (head_activate == 0 && anchors_[bound_anchor_].GetChangedThisStep()==false) {
     // Unbind bound head
@@ -252,6 +252,7 @@ void Crosslink::SinglyKMC() {
       Logger::Trace("Crosslink %i with anchor %i came unbound", GetOID(), anchors_[bound_anchor_].GetOID()); 
     }
   } else if (head_activate == 1) {
+    //Logger::Info("Single Binding");
     // Bind unbound head
     // Track binding
     tracker_->BindSD();
@@ -288,6 +289,7 @@ void Crosslink::SinglyKMC() {
                   bind_obj->GetOID());
     } else {
       Sphere *bind_obj = anchors_[bound_anchor_].GetSphereNeighbor(i_bind - n_neighbors_rod);
+      //if (bind_obj -> GetNAnchored() == 0) {
       (*bound_curr_)[bind_obj].first.push_back(kmc_bind.getProb(i_bind));
       std::pair<Anchor*, std::string> anchor_and_bind_type;
       anchors_[(int)!bound_anchor_].SetCrosslinkPointer(this);
@@ -299,15 +301,17 @@ void Crosslink::SinglyKMC() {
                   bind_obj->GetOID());
       //If crosslinkers can't cross check if newly bound crosslinker is crossing
       if (sparams_ -> cant_cross == true) {
-        Logger::Error("cant cross flag needs repairing");
+        //Logger::Error("cant cross flag needs repairing");
         check_for_cross = true;
         last_bound_ = (int)!bound_anchor_;
         if (*global_check_for_cross_ == true) {
-          Logger::Error("Two crosslinks bound during same time step");
+          //Logger::Warning("Two crosslinks bound during same time step");
         } else {
           *global_check_for_cross_ = true;
         }
       }
+      //bind_obj -> IncrementNAnchored();
+     //}
     }
   }
 }
@@ -355,17 +359,56 @@ void Crosslink::DoublyKMC() {
   // For asymmetric springs apply second spring constant for compression
   double e_dep = e_dep_factor_;
   double f_dep = fdep_length_;
+  if (sparams_->motor_off==true){
+    e_dep=0;
+    f_dep=1;
+  }
+  //double factor = 1;
+
+  //if (force_[1]<0){   
+        //factor=(1-force_[0]/30.38*.375);
+  //   factor=(1-force_[1]*0.066);
+  //   } else {
+  //   factor=(1+force_[1]*0.066);
+        //factor=(1+force_[0]/30.38*.8);
+  //    }
+  //if (force_[0]<0){   
+        //factor=(1-force_[0]/30.38*.375);
+  //   factor+=0;
+  //   } else {
+  //   factor+=force_[0]*0.033;
+        //factor=(1+force_[0]/30.38*.8);
+  //    }
+  //f_dep *= factor;
+
   if (k_spring_compress_ >= 0 && tether_stretch < 0) {
     e_dep *= 0.5 * k_spring_compress_ * SQR(tether_stretch);
-    f_dep *= k_spring_compress_ * tether_stretch;
   } else {
     e_dep *= 0.5 * k_spring_ * SQR(tether_stretch);
-    f_dep *= k_spring_ * tether_stretch;
   }
+  //printf("[%f,%f]", f_dep);
   std::vector<double> unbind_prob;
+  double k1_0 = 0.02;
+  double x1 = 0.018;
+  double y1 =0.0225; //0.018;
+  double k2_0 = 0.356;
+  double x2=0;
+  double y2=0.0072;
   for (int i = 0; i < 2; i++) {
-    unbind_prob.push_back(anchors_[i].GetOffRate() * delta_ * exp(e_dep + f_dep));
+    //Logger::Info("Off is %f", anchors_[i].GetOffRate());
+    if (sparams_->motor_off==false){
+      unbind_prob.push_back(anchors_[i].GetOffRate() * delta_ * exp(e_dep + f_dep));
+    } else{
+      double k1=k1_0*exp(off_calc_fx_*x1+off_calc_fy_*y1); 
+      double k2=k2_0*exp(off_calc_fx_*x2+off_calc_fy_*y2);
+      double off_total=k1*k2/(k1+k2);
+      //printf("Force x = %f, force y = %f, off = %f \n", off_calc_fx_, off_calc_fy_, off_total);
+
+      unbind_prob.push_back(off_total* delta_);
+    }
   }
+
+
   tracker_->TrackDS(unbind_prob[0]); // Richelle modify to track full prob
   double roll = rng_.RandomUniform();
   int head_activate = -1;
@@ -411,6 +454,13 @@ std::vector<double> Crosslink::GetAnchorS() {
   s_values_.push_back(anchors_[0].GetRecS());
   s_values_.push_back(anchors_[1].GetRecS());
   return s_values_;
+}
+
+//Get how far anchors are along the filaments
+bool Crosslink::StillDBound() {
+  bool double_bound;
+  double_bound = (anchors_[0].StillBound() && anchors_[1].StillBound());
+  return double_bound;
 }
 
 //Get the IDs of the filaments that the receptors the anchors are connected to are connected to
@@ -574,8 +624,17 @@ void Crosslink::CalculateTetherForces() {
   for (int i = 0; i < params_->n_dim; ++i) {
     force_[i] = tether_force_ * orientation_[i];
   }
+  //printf("orientation = %f, %f, force = mag %f, %f, %f, anchor locations are %f, %f\n", orientation_[0], orientation_[1], tether_force_, force_[0], force_[1], anchors_[0].GetPosition()[1], anchors_[1].GetPosition()[1]);
   anchors_[0].AddForce(force_);
   anchors_[1].SubForce(force_);
+ 
+  if (anchors_[0].GetPosition()[1]>anchors_[1].GetPosition()[1]){
+    off_calc_fx_=-force_[0];
+    off_calc_fy_=force_[1];
+  } else {
+    off_calc_fx_=force_[0];
+    off_calc_fy_=-force_[1];
+  }
 
   //If anchors are double bound and hopping between receptors then we need to calculate 
   //the energy to the neighboring sites to determine hopping rates

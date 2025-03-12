@@ -99,6 +99,7 @@ void CrosslinkManager::CheckForCross() {
   int member_num_ = (*spec_one) -> GetNMembers(); 
     for (int i = 0; i <= (member_num_-1); i++) {
       Crosslink* link_one = (*spec_one) -> GetCrosslink(i);
+next_cl:
       // Check is we need to check for crossing for this crosslinker 
       if (link_one -> IsDoubly() && link_one -> ReturnCheckForCross() == true) {
         for (auto spec_two = xlink_species_.begin(); spec_two != xlink_species_.end(); ++spec_two) {
@@ -107,6 +108,13 @@ void CrosslinkManager::CheckForCross() {
             Crosslink* link_two = (*spec_two) -> GetCrosslink(j);
             //If link two is double bound and the crosslinkers aren't the same crosslinker
             if(link_two -> IsDoubly() && link_one -> GetOID() != link_two -> GetOID()) {
+              //Check if anchors still bound 
+              bool link_one_db = link_one -> StillDBound();
+              bool link_two_db = link_two -> StillDBound();
+              if (!(link_one_db && link_two_db)) {
+                Logger::Warning("Bools were %b, %b", link_one_db, link_two_db);
+                continue;
+              }                         
               //Get how far the crosslinker anchors are along the filament
               std::vector<double> link_one_s = link_one -> GetAnchorS();
               std::vector<double> link_two_s = link_two -> GetAnchorS();
@@ -131,7 +139,7 @@ void CrosslinkManager::CheckForCross() {
               if (same_microtubules && ((link_one_s[0] > link_two_s[0] && link_one_s[1] < link_two_s[1]) 
                      || (link_one_s[0] < link_two_s[0] && link_one_s[1] > link_two_s[1]))) { 
                 link_one -> UnbindCrossing();
-                break;
+                goto next_cl;
               } else {
                 link_one -> SetCheckForCross();
               } 
@@ -172,13 +180,18 @@ void CrosslinkManager::Knockout() {
     // If one anchor wants to bind to a receptor bind it
     if (receptor_info.first.size() == 1) {
       KnockoutBind(receptor, 0);
+
       }
 
     //If two or three anchors want to bind to a receptor choose which one binds 
     else if (receptor_info.first.size() == 2 || receptor_info.first.size() == 3) {
       double sum_of_probs = std::accumulate(receptor_info.first.begin(), receptor_info.first.end(), 0.0);
-      Logger::Trace("%i anchors want to bind to site %i with total probability %f. If this warning is common, or if probability is much greater than 1 reduce time step.",
+      Logger::Trace("%i anchors want to bind to site %i with total probability %f. If this warning is common, or if probability is greater than 1 reduce time step.",
                      receptor_info.first.size(), receptor->GetOID(), sum_of_probs);
+        int events=1;
+        if (receptor_info.second[events].second == "forward step" || receptor_info.second[events].second == "back step" || receptor_info.second[events].second == "single to double") {
+         Logger::Trace("Prop is %f, Anchor is %i, Bind type is %s", receptor_info.first[events], receptor_info.second[events].first->GetOID(), receptor_info.second[events].second.c_str());
+        }
       double roll = sum_of_probs*rng_->RandomUniform();
       int count = 0;
       std::vector<double> prob_list = receptor_info.first;
@@ -186,7 +199,7 @@ void CrosslinkManager::Knockout() {
         if (*prob>roll) {
           KnockoutBind(receptor, count);
           Logger::Trace("chose %s, from roll, %f", receptor_info.second[count].second.c_str(), roll); 
-          roll =1000000;
+          break;
         }
         else {
           roll -= *prob;
@@ -227,11 +240,13 @@ void CrosslinkManager::KnockoutBind(Sphere* receptor, int winner) {
     Object* ob_pointer = bound_curr_[receptor].second[winner].first->GetCrosslinkPointer();
     Crosslink* cl_pointer = dynamic_cast<Crosslink*>(ob_pointer);
     if (!cl_pointer) {
-      Logger::Error("Dynamic cast failed, cl_pointer doesn't exist");
+      Logger::Warning("Dynamic cast failed, cl_pointer doesn't exist");
     }    
-		cl_pointer->SetDoubly();
+    if (cl_pointer){
+    cl_pointer->SetDoubly();
     bound_curr_[receptor].second[winner].first->AttachObjCenter(receptor);
-  }
+    } 
+ }
 
   //Free to single bind
   else if (bound_curr_[receptor].second[winner].second == "free to single") {

@@ -172,11 +172,21 @@ void Anchor::UpdatePosition() {
       discrete_diffusion_ = DiscreteDiffuse();
     }
     if (walker) {
+      //Logger::Info("Stepping as walker");
       discrete_velocity_ = DiscreteWalk();
       DecideToStepMotor(discrete_diffusion_, discrete_velocity_);
     }
     if (!walker) {
-      DecideToStepCrosslink(discrete_diffusion_);
+       switch (state_){
+       case +bind_state::singly:
+        DecideToStepCrosslinkSingly(discrete_diffusion_);
+       break;
+       case +bind_state::doubly:
+       DecideToStepCrosslink(discrete_diffusion_);
+       break; 
+       }
+       //Logger::Info("Stepping as no walker");
+      //DecideToStepCrosslink(discrete_diffusion_);
     }  
   }
 }
@@ -191,8 +201,10 @@ void Anchor::DecideToStepMotor(double discrete_diffusion_, double discrete_veloc
   //See  equation 7.30 and 7.31 from "Molecular motors: thermodynamics and
   //the random walk" (Thomas et al. 2001). Equation rearranged to solve for
   //k+ and k-
-  chance_forward_ = (D/pow(step_size_,2) + 0.5*vel_/step_size_)*delta_;
-  chance_back_ = (D/pow(step_size_,2) - 0.5*vel_/step_size_)*delta_;
+  //chance_forward_ = (D/pow(step_size_,2) + 0.5*vel_/step_size_)*delta_;
+  //chance_back_ = (D/pow(step_size_,2) - 0.5*vel_/step_size_)*delta_;
+  chance_forward_ = vel_/step_size_*delta_;
+  chance_back_ = 0;
 
   if (chance_forward_>roll) {
     PrepareToStepForward(chance_forward_);
@@ -201,7 +213,30 @@ void Anchor::DecideToStepMotor(double discrete_diffusion_, double discrete_veloc
     PrepareToStepBack(chance_back_);
   }
   if ( (chance_back_+chance_forward_) > 1) {
-    Logger::Warning("Chance of anchor, %i, hopping sites greater than one chance back %f, chance forward %f", this->GetOID(), chance_back_, chance_forward_); 
+    //Logger::Warning("Chance of anchor, %i, hopping sites greater than one chance back %f, chance forward %f", this->GetOID(), chance_back_, chance_forward_); 
+  }
+}
+
+void Anchor::DecideToStepCrosslinkSingly(double discrete_diffusion_) {
+  double roll = rng_.RandomUniform();  
+  double D = discrete_diffusion_;
+  double chance_forward_ = 0;
+  double chance_back_ = 0;
+  double step_size_ = sphere_ -> GetStepSize();
+
+  //Calculating the chance the crosslinker will diffuse toward plus end
+  //If distance has been set to -1 this means the anchor is already at
+  //the plus end of the microtubule and can't diffuse towards the plus end
+  chance_forward_ = (D/pow(step_size_,2))*delta_;
+  chance_back_ = (D/pow(step_size_,2))*delta_;
+  if (chance_forward_>roll) {
+    PrepareToStepForward(chance_forward_);
+  }
+  else if (chance_back_>(1-roll)) {
+    PrepareToStepBack(chance_back_);
+  }
+  if ( (chance_back_+chance_forward_) > 1) {
+    //Logger::Warning("Chance of anchor ,%i,hopping sites greater than one (chance back %f, chance forward %f)", this->GetOID(),chance_back_, chance_forward_);
   }
 }
 
@@ -211,10 +246,18 @@ void Anchor::DecideToStepCrosslink(double discrete_diffusion_) {
   double D = discrete_diffusion_;
   double chance_forward_ = 0;
   double chance_back_ = 0;
-  double k = sparams_ -> k_spring;
+  double k = 0;
+  double k_stretch = sparams_ -> k_spring;
+  double k_comp = sparams_ -> k_spring_compress;
   double r_l = sparams_ -> rest_length;
   //Calculate the current energy
-  double energy = 0.5 * k * pow((cl_length_ - r_l), 2);   
+  double del_l = cl_length_ - r_l;
+  if (del_l<0){
+    k=k_comp;
+  } else {
+    k=k_stretch;
+  }
+  double energy = 0.5 * k * pow((del_l), 2);   
   double step_size_ = sphere_ -> GetStepSize();
   double plus_diffusion = 0;
   double minus_diffusion = 0;
@@ -227,7 +270,13 @@ void Anchor::DecideToStepCrosslink(double discrete_diffusion_) {
   }
   else {
     //Calculate the energy change between current length and length at plus
-    double energy_to_plus = 0.5 * k * pow((distance_to_plus_ - r_l), 2); 
+    del_l = distance_to_plus_ - r_l;
+    if (del_l<0){
+      k=k_comp;
+    } else {
+      k=k_stretch;
+    }
+    double energy_to_plus = 0.5 * k * pow(del_l, 2); 
     double e_change_to_p = energy_to_plus - energy;
     //Calculate Boltz factor assuming lambda = 1/2
     double boltz_factor_p = exp(-0.5 * e_change_to_p);
@@ -245,8 +294,14 @@ void Anchor::DecideToStepCrosslink(double discrete_diffusion_) {
     chance_back_ = 0;
   }
   else {
+    del_l = distance_to_minus_ - r_l;
+    if (del_l<0){
+      k=k_comp;
+    } else {
+      k=k_stretch;
+    }
     //Calculate the energy change between current length and length at plus
-    double energy_to_minus = 0.5 * k * pow((distance_to_minus_ - r_l), 2); 
+    double energy_to_minus = 0.5 * k * pow((del_l), 2); 
     double e_change_to_m = energy_to_minus - energy;
     //Calculate Boltz factor assuming lambda = 1/2
     double boltz_factor_m = exp(-0.5 * e_change_to_m);
@@ -265,7 +320,7 @@ void Anchor::DecideToStepCrosslink(double discrete_diffusion_) {
     PrepareToStepBack(chance_back_);
   }
   if ( (chance_back_+chance_forward_) > 1) {
-    Logger::Warning("Chance of anchor ,%i,hopping sites greater than one (chance back %f, chance forward %f)", this->GetOID(),chance_back_, chance_forward_);
+    //Logger::Warning("Chance of anchor ,%i,hopping sites greater than one (chance back %f, chance forward %f)", this->GetOID(),chance_back_, chance_forward_);
   }
 }
 
@@ -277,6 +332,8 @@ void Anchor::PrepareToStepForward(double prob) {
   if (next_receptor_ != NULL) {
     std::string name = next_receptor_->GetName();
     single_occupancy = bind_param_map_->at(index_)[name].single_occupancy;
+  } else if (plus_end_pausing_== false){
+    Unbind(); 
   }
   //If receptor is trying to move to an open receptor move.
   //If null that means the receptor is on edge of filament already.
@@ -300,6 +357,8 @@ void Anchor::PrepareToStepBack(double prob) {
   if (last_receptor_ != NULL) {
    std::string name = last_receptor_->GetName();
     single_occupancy = bind_param_map_->at(index_)[name].single_occupancy;
+  } else if (plus_end_pausing_== false){
+    Unbind(); 
   }
   //If receptor is trying to move to an open receptor move
   //If null that means the receptor is on edge of tube already
@@ -339,6 +398,7 @@ void Anchor::SetCrosslinkPointer(Object* cl_pointer) {
 
 //Anchor steps in the minus direction
 void Anchor::StepBack() {
+  //Logger::Info("Stepped back");
   Sphere* last_receptor_ = nullptr;
   last_receptor_ = sphere_->GetMinusNeighbor();
   bool single_occupancy = true;
@@ -356,6 +416,7 @@ void Anchor::StepBack() {
 
 //Anchor steps in the plus direction
 void Anchor::StepForward() {
+  //Logger::Info("Stepped forward");
   Sphere* next_receptor_ = nullptr;
   next_receptor_ = sphere_->GetPlusNeighbor();
   bool single_occupancy = true;
@@ -467,7 +528,8 @@ bool Anchor::CheckMesh() {
 }
 
 void Anchor::Unbind() {
-  Logger::Trace("Anchor %i unbound", this->GetOID());
+  //Logger::Info("Anchor %i unbound", this->GetOID());
+  //Logger::Info("DeAttathed to %i", sphere_);
   if (static_flag_) {
     Logger::Error("Static anchor attempted to unbind");
   }
@@ -593,7 +655,7 @@ void Anchor::Draw(std::vector<graph_struct *> &graph_array) {
   }
   std::copy(orientation_, orientation_ + 3, g_.u);
   g_.color = color_;
-  g_.diameter = 2; //diameter_;
+  g_.diameter = .32; //diameter_;
   g_.length = length_;
   g_.draw = draw_;
   graph_array.push_back(&g_);
@@ -673,6 +735,8 @@ void Anchor::AttachObjLambda(Object *o, double lambda) {
 /* Attach object in center of site. Site binding likelihood weighted by 
  * surface area, but binding places crosslinks in center regardless. */
 void Anchor::AttachObjCenter(Object *o) {
+  //Logger::Info("Attathed to %i", o);
+  //Logger::Info("Anchor %i unbound", this->GetOID());
   o->IncrementNAnchored();
   if (use_bind_file_) SetRatesFromBindFile(o->GetName());
   if (o->GetShape() != +shape::sphere) {
@@ -887,6 +951,15 @@ double Anchor::GetRecS() {
   } else {
     Logger::Error("Anchor is not attatched to Sphere");
   return 0;
+  }
+}
+
+//Get how far the anchor's receptor is on the filament (currently only set up for parallel and antiparallel) 
+bool Anchor::StillBound() {
+  if (sphere_) {    
+    return true;
+  } else {
+    return false;
   }
 }
 

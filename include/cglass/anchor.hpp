@@ -89,6 +89,7 @@ class Anchor : public Object {
   bool CalcRodLambda();
   void DecideToStepMotor(double dis_dif, double dis_vel);
   void DecideToStepCrosslink(double dis_dif);
+  void DecideToStepCrosslinkSingly(double dis_dif);
   void PrepareToStepBack(double prop);
   void PrepareToStepForward(double prop);
 
@@ -147,6 +148,7 @@ class Anchor : public Object {
   Object *GetNeighbor(int i_neighbor);
   Sphere *GetSphereNeighbor(int i_neighbor);
   double GetRecS();
+  bool StillBound();
   int GetPCID();
   Rod *GetRodNeighbor(int i_neighbor);
   const int GetNNeighbors() const;

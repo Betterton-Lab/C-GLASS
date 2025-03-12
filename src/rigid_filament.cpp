@@ -115,7 +115,7 @@ void RigidFilament::Integrate() {
     double t_dot_u = dot_product(3, torque_, constrain_vec_);
     for (int i = 0; i < 3; ++i) {
       force_eff[i] -= f_dot_u * constrain_vec_[i];
-      torque_eff[i] = t_dot_u * constrain_vec_[i];
+      //torque_eff[i] = t_dot_u * constrain_vec_[i];
     }
   }
   // Construct mobility matrix
@@ -134,26 +134,31 @@ void RigidFilament::Integrate() {
   for (int i = 0; i < n_dim_; ++i) {
     for (int j = 0; j < n_dim_; ++j) {
       position_[i] += mob_mat[i * n_dim_ + j] * force_eff[j] * delta_;
+      //if (i==0 && j==0) {
+      //  Logger::Info("Gamma is %f, %f", gamma_par_, gamma_perp_);
+      //}
     }
   }
   // Reorientation due to external torques
   double du[3];
   cross_product(torque_eff, orientation_, du, 3); // ndim=3 since torques
-  for (int i = 0; i < n_dim_; ++i) {
-    orientation_[i] += du[i] * delta_ / gamma_rot_;
-  }
+  //for (int i = 0; i < n_dim_; ++i) {
+  //  orientation_[i] += du[i] * delta_ / gamma_rot_;
+  //}
   normalize_vector(orientation_, n_dim_);
   if (!zero_temperature_ && !constrain_to_move_in_y_) {
     // Add the random displacement dr(t)
     AddRandomDisplacement();
     // Update the orientation due to torques and random rotation
-    AddRandomReorientation();
+    //AddRandomReorientation();
   }
   //With constrain_to_move_in_y on filaments don't roate and only diffuse in
   //the y direction
   if (!zero_temperature_ && constrain_to_move_in_y_) {
      //Add the random displacement dr(t)
      AddRandomYDisplacement();
+     //temp
+     //AddRandomDisplacement();
   }
 
   UpdatePeriodic();
@@ -179,6 +184,12 @@ void RigidFilament::AddRandomDisplacement() {
     for (int i = 0; i < n_dim_; ++i)
       position_[i] += mag * body_frame_[n_dim_ * j + i];
   }
+  //if (position_[1]<1) {
+  // position_[1]=1; 
+  //}
+  //if (position_[1]>2.4) {
+  // position_[1]=2.4; 
+  //}
   
   // Handle the random orientation update after updating orientation from
   // interaction torques
@@ -343,6 +354,10 @@ void RigidFilament::ApplyForcesTorquesYOnly() {
     if (i==1){
       force_[i] += force[1];
     }
+    //temp
+    //if (i==0){
+    //  force_[i] += force[0];
+    //}
     else {
       force_[i]=0;
     }

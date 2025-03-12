@@ -81,6 +81,8 @@ static_particle_number: [false, bool] # Tells interaction engine that particle n
                                       # change, circumventing certain book-keeping functions.
 checkpoint_from_spec: [false, bool]  # Generate a checkpoint file from an existing spec file.
 potential: [wca, string]             # Specifies interaction potential between all particles.
+wham_mag: [0, double]
+wham_cen: [0, double]
 reflect_at_boundary: [false, bool]   # If true particles outside the set boundary are relfected back inside,
                                      # only set up for sphere and protrusion boundaries
 soft_potential_mag: [10, double]     # Energy scaling parameter for GEM-8 potential.
@@ -324,6 +326,7 @@ crosslink:                          # Parameters specific to crosslinks.
   begin_with_bound_crosslinks: [0, int]   # if greater than 0 the simultion begins with the specified number
                                     # of crosslinkers singly attached to microtubules
   begin_double_bound: [false, bool]  # Crosslinks from begin with_with_bound_crosslinks start double
+  Add_at: [0, int]                  # The time step where the crosslink is added to the experiment
                                     # bound. Only programmed for two parallel filaments. 
   no_binding: [false, bool]         # With flag set to true crosslinks wont bind or unbind
   no_solution_binding: [false, bool] # With flag set to true croeelinks will switch bewtween singly and double
@@ -349,6 +352,7 @@ crosslink:                          # Parameters specific to crosslinks.
                                     # force-dependent off-rate of doubly-bound 
                                     # crosslinks when under a load. 
                                     # (x_c > 0 = slip bond, x_c < 0 = catch bond)
+  motor_off: [false, bool]          
   polar_affinity: [1, double]       # Ratio of (probability of binding for antiparallel)/(probability 
                                     # of binding parallel)  
   k_spring: [10, double]            # Spring constant of doubly-bound crosslinks.

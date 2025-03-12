@@ -151,6 +151,7 @@
   default_config["crosslink"]["use_number"] = "false";
   default_config["crosslink"]["begin_with_bound_crosslinks"] = "0";
   default_config["crosslink"]["begin_double_bound"] = "false";
+  default_config["crosslink"]["Add_at"] = "0";
   default_config["crosslink"]["no_binding"] = "false";
   default_config["crosslink"]["no_solution_binding"] = "false";
   default_config["crosslink"]["use_binding_volume"] = "true";
@@ -163,6 +164,7 @@
   default_config["crosslink"]["diffusion_free"] = "0";
   default_config["crosslink"]["energy_dep_factor"] = "0";
   default_config["crosslink"]["force_dep_length"] = "0";
+  default_config["crosslink"]["motor_off"] = "false";
   default_config["crosslink"]["polar_affinity"] = "1";
   default_config["crosslink"]["k_spring"] = "10";
   default_config["crosslink"]["k_spring_compress"] = "-1.";
@@ -247,6 +249,8 @@
   default_config["static_particle_number"] = "false";
   default_config["checkpoint_from_spec"] = "false";
   default_config["potential"] = "wca";
+  default_config["wham_mag"] = "0";
+  default_config["wham_cen"] = "0";
   default_config["reflect_at_boundary"] = "false";
   default_config["soft_potential_mag"] = "10";
   default_config["soft_potential_mag_target"] = "-1";

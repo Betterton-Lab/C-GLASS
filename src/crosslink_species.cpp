@@ -12,9 +12,11 @@ void CrosslinkSpecies::Init(std::string spec_name, ParamsParser &parser) {
   begin_with_bound_crosslinks_ = sparams_.begin_with_bound_crosslinks;
   xlink_concentration_ = sparams_.concentration;
   infinite_reservoir_flag_ = sparams_.infinite_reservoir_flag;
+  step_count_=0;
   if (sparams_.use_number==false) {
     sparams_.num = (int)round(sparams_.concentration * space_->volume);
   }
+  printf("number is %d \n", sparams_.num);
   std::vector<std::string> bind_file = {sparams_.anchors[0].bind_file, sparams_.anchors[1].bind_file};
   
   // Create a default set of specific binding parameters
@@ -329,14 +331,17 @@ void CrosslinkSpecies::InsertAttachedCrosslinksSpecies(std::vector<std::vector<O
   if (sparams_.begin_double_bound == false) {
     for (int i=0; i < begin_with_bound_crosslinks_; ++i) {
       BindCrosslink();
+      members_.back().SetGlobalCheckForCross(global_check_for_cross_);
     }
   }
   //If crosslinkers are starting doubly bound 
   else {
     for (int i=0; i < begin_with_bound_crosslinks_; ++i) {
       BindDoubly(receptor_list[0][i], receptor_list[1][i]);
+      members_.back().SetGlobalCheckForCross(global_check_for_cross_);
     }
-  }   
+  }
+     
 }
 
 // Calculate and bind crosslinkers from solution implicitly
@@ -351,6 +356,7 @@ void CrosslinkSpecies::CalculateBindingFree() {
                                   // crosslinkers binding from solution
     free_concentration = xlink_concentration_;
   } else { // Have a constant number of crosslinkers in a space
+    //printf("Number is %i \n",sparams_.num - n_members_);
     free_concentration = (sparams_.num - n_members_) / space_->volume;
   }
   if (use_bind_file_) {
@@ -572,10 +578,11 @@ void CrosslinkSpecies::UpdatePositions() {
   if (!params_->on_midstep) {
     /* First update bound crosslinks state and positions */
     UpdateBoundCrosslinks();
-    if (sparams_.no_binding == false && sparams_.no_solution_binding == false && sparams_.exist_while_unbound == false){
+    if (sparams_.no_binding == false && sparams_.no_solution_binding == false && sparams_.exist_while_unbound == false && step_count_>sparams_.Add_at){
       /* Calculate implicit binding of crosslinks from solution */
       CalculateBindingFree();
     }
+    step_count_+=1;
   } else {
     /* Apply tether forces from doubly-bound crosslinks onto anchored objects.
        We do this every half step only, because the fullstep tether forces are

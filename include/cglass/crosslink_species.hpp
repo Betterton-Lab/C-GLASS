@@ -39,7 +39,7 @@ private:
 
   // Binding factor- k_on_s * bind_site_density * object_amount
   double bind_rate_;
-
+  int step_count_;
   void InitializeBindParams();
   LUTFiller *MakeLUTFiller();
   void CalculateBindingFree();
