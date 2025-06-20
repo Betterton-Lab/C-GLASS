@@ -183,6 +183,7 @@
   default_config["crosslink"]["f_to_s_radius"] = "1";
   default_config["crosslink"]["exist_while_unbound"] = "false";
   default_config["crosslink"]["lut_grid_num"] = "256";
+  default_config["crosslink"]["k_0"] = "1";
   default_config["receptor"]["component"] = "cortex";
   default_config["receptor"]["concentration"] = "-1";
   default_config["receptor"]["induce_catastrophe"] = "false";

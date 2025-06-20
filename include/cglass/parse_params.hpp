@@ -783,6 +783,8 @@ species_base_parameters *parse_species_params(std::string sid,
       params.exist_while_unbound = jt->second.as<bool>();
       } else if (param_name.compare("lut_grid_num")==0) {
       params.lut_grid_num = jt->second.as<int>();
+      } else if (param_name.compare("k_0")==0) {
+      params.k_0 = jt->second.as<double>();
       } else if (param_name.compare("anchors")==0) {
         for (size_t i = 0; i < jt->second.size(); ++i) {
           if (i > 1) {

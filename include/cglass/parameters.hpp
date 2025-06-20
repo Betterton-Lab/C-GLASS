@@ -202,6 +202,7 @@ struct species_parameters<species_id::crosslink>
   double f_to_s_radius = 1;
   bool exist_while_unbound = false;
   int lut_grid_num = 256;
+  double k_0 = 1;
   struct anchor_parameters {
     double velocity_s = 0;
     double velocity_d = 0;

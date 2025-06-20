@@ -23,7 +23,11 @@ public:
       MaxForceViolation();
     }
     for (int i = 0; i < n_dim_; ++i) {
-      ix.force[i] = ffac * dr[i] * rinv;
+      if (rmag<rcut_-4){
+      	ix.force[i] = ffac * dr[i] * rinv;
+      } else {
+        ix.force[i] = 0;
+      }
     }
     if (wham_mag_!=0) {
      ix.force[1] += -wham_mag_*(-dr[1]-wham_cen_);
@@ -47,6 +51,9 @@ public:
     // restricted to be at 2^(1/6)sigma
 
     rcut_ = pow(2.0, 1.0 / 6.0) * sigma_;
+    if (params->wham_mag!=0){
+      rcut_+=4;
+    }
     rcut2_ = rcut_ * rcut_;
     c12_ = 4.0 * eps_ * pow(sigma_, 12.0);
     c6_ = 4.0 * eps_ * pow(sigma_, 6.0);

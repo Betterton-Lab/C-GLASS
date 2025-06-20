@@ -380,33 +380,68 @@ void Crosslink::DoublyKMC() {
         //factor=(1+force_[0]/30.38*.8);
   //    }
   //f_dep *= factor;
-
+  double s_fac =0;
   if (k_spring_compress_ >= 0 && tether_stretch < 0) {
     e_dep *= 0.5 * k_spring_compress_ * SQR(tether_stretch);
   } else {
     e_dep *= 0.5 * k_spring_ * SQR(tether_stretch);
   }
+  double separation = anchors_[0].GetPosition()[1]-anchors_[1].GetPosition()[1];
+  if (separation<0) {
+    separation*=-1;
+  }
+  if (tether_stretch < 0 and separation > 0.6) {
+    s_fac=1;
+  }
+  if (tether_stretch > 0 and separation < 0.6) {
+    s_fac=1;
+  }
   //printf("[%f,%f]", f_dep);
+
   std::vector<double> unbind_prob;
-  double k1_0 = 0.02;
-  double x1 = 0.018;
-  double y1 =0.0225; //0.018;
+  double k1_0 = sparams_->k_0; //0.005; //0.05;
+  double x1 = 0.04; //0.0587;
+  double y1 =0.018; //0.027; //0.018;
   double k2_0 = 0.356;
-  double x2=0;
-  double y2=0.0072;
+  double x2=0.0072;
+  double y2=0;
   for (int i = 0; i < 2; i++) {
     //Logger::Info("Off is %f", anchors_[i].GetOffRate());
     if (sparams_->motor_off==false){
       unbind_prob.push_back(anchors_[i].GetOffRate() * delta_ * exp(e_dep + f_dep));
     } else{
+      if (off_calc_fx_<0) {
+        off_calc_fx_=off_calc_fx_*-1;
+      }
       double k1=k1_0*exp(off_calc_fx_*x1+off_calc_fy_*y1); 
       double k2=k2_0*exp(off_calc_fx_*x2+off_calc_fy_*y2);
-      double off_total=k1*k2/(k1+k2);
+      //double off_total=k1*k2/(k1+k2)*s_fac;
+      double off_total=k1*s_fac;
       //printf("Force x = %f, force y = %f, off = %f \n", off_calc_fx_, off_calc_fy_, off_total);
 
       unbind_prob.push_back(off_total* delta_);
     }
   }
+ /*
+  std::vector<double> unbind_prob;
+  double off_rate = sparams_->k_0;
+  double base_off = 0.0249;
+  double off_total = 0;
+  for (int i = 0; i < 2; i++) {
+    //Logger::Info("Off is %f", anchors_[i].GetOffRate());
+    if (sparams_->motor_off==false){
+      unbind_prob.push_back(anchors_[i].GetOffRate() * delta_ * exp(e_dep + f_dep));
+    } else{
+      if (off_calc_fx_<0) {
+        off_total=base_off-off_calc_fx_*0.000469;
+      } else{
+        off_total=base_off+off_calc_fx_*0.00257;
+      }
+      off_total*=off_rate/base_off;
+      unbind_prob.push_back(off_total* delta_*s_fac);
+    }
+  }
+  */
 
 
   tracker_->TrackDS(unbind_prob[0]); // Richelle modify to track full prob

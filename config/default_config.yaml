@@ -382,6 +382,7 @@ crosslink:                          # Parameters specific to crosslinks.
   exist_while_unbound: [false, bool] # If true crosslinks are simulated while not bound to a filament
   lut_grid_num: [256, int]          # Number of grid points used in one dimension of the the lookup table (LUT).
                                     # Total entries go as the square of this number e.g. 256 x 256
+  k_0: [1, double]
 
   anchors:
     velocity_s: [0, double]           # Bound crosslink head velocities when walkers are singly bound.
