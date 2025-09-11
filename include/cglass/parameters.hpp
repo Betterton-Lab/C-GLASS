@@ -188,6 +188,7 @@ struct species_parameters<species_id::crosslink>
   bool motor_off = false;
   double y_boost = 1;
   double k_0 = 1;
+  double scale_off = 1;
   double polar_affinity = 1;
   double k_spring = 10;
   double k_spring_compress = -1.;

@@ -757,6 +757,8 @@ species_base_parameters *parse_species_params(std::string sid,
       params.y_boost = jt->second.as<double>();
       } else if (param_name.compare("k_0")==0) {
       params.k_0 = jt->second.as<double>();
+      } else if (param_name.compare("scale_off")==0) {
+      params.scale_off = jt->second.as<double>();
       } else if (param_name.compare("polar_affinity")==0) {
       params.polar_affinity = jt->second.as<double>();
       } else if (param_name.compare("k_spring")==0) {

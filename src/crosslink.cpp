@@ -571,6 +571,7 @@ void Crosslink::DoublyKMC() {
   double x2=0.0124;
   double y2=0.0100;
   double s_fac=1;
+  double scale_off = sparams_->scale_off;
 
     double angle=0;
     if (orientation_[1]>0) {
@@ -599,7 +600,7 @@ void Crosslink::DoublyKMC() {
          k1=k1_0*exp(off_calc_fx_[i]*x1+abs(off_calc_fy_[i]*y1));
         k2=k2_0*exp(off_calc_fx_[i]*x2+abs(off_calc_fy_[i]*y2));
       }
-      double off_total=k1*k2/(k1+k2);
+      double off_total=scale_off*k1*k2/(k1+k2);
     double angle=0;
     if (orientation_[1]>0) {
         angle=acos(orientation_[0]);

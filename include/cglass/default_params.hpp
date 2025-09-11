@@ -169,6 +169,7 @@
   default_config["crosslink"]["motor_off"] = "false";
   default_config["crosslink"]["y_boost"] = "1";
   default_config["crosslink"]["k_0"] = "1";
+  default_config["crosslink"]["scale_off"] = "1";
   default_config["crosslink"]["polar_affinity"] = "1";
   default_config["crosslink"]["k_spring"] = "10";
   default_config["crosslink"]["k_spring_compress"] = "-1.";

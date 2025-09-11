@@ -360,6 +360,7 @@ crosslink:                          # Parameters specific to crosslinks.
                                     # currently set based on the unbinding curve for kinesin-5. 
   y_boost: [1, double]              # Amount to boost y off rate by 
   k_0: [1, double]                  # Base off rate used when motor_off=True
+  scale_off: [1, double]
   polar_affinity: [1, double]       # Ratio of (probability of binding for antiparallel)/(probability 
                                     # of binding parallel)  
   k_spring: [10, double]            # Spring constant of doubly-bound crosslinks.
