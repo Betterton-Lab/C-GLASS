@@ -172,21 +172,18 @@ void Anchor::UpdatePosition() {
       discrete_diffusion_ = DiscreteDiffuse();
     }
     if (walker) {
-      //Logger::Info("Stepping as walker");
       discrete_velocity_ = DiscreteWalk();
       DecideToStepMotor(discrete_diffusion_, discrete_velocity_);
     }
     if (!walker) {
        switch (state_){
        case +bind_state::singly:
-        DecideToStepCrosslinkSingly(discrete_diffusion_);
+         DecideToStepCrosslinkSingly(discrete_diffusion_);
        break;
        case +bind_state::doubly:
-       DecideToStepCrosslink(discrete_diffusion_);
+         DecideToStepCrosslink(discrete_diffusion_);
        break; 
        }
-       //Logger::Info("Stepping as no walker");
-      //DecideToStepCrosslink(discrete_diffusion_);
     }  
   }
 }
@@ -198,14 +195,8 @@ void Anchor::DecideToStepMotor(double discrete_diffusion_, double discrete_veloc
   double chance_forward_ = 0;
   double chance_back_ = 0;
   double D = discrete_diffusion_;
-  //See  equation 7.30 and 7.31 from "Molecular motors: thermodynamics and
-  //the random walk" (Thomas et al. 2001). Equation rearranged to solve for
-  //k+ and k-
-  //chance_forward_ = (D/pow(step_size_,2) + 0.5*vel_/step_size_)*delta_;
-  //chance_back_ = (D/pow(step_size_,2) - 0.5*vel_/step_size_)*delta_;
   chance_forward_ = vel_/step_size_*delta_;
   chance_back_ = 0;
-
   if (chance_forward_>roll) {
     PrepareToStepForward(chance_forward_);
   }
@@ -250,17 +241,22 @@ void Anchor::DecideToStepCrosslink(double discrete_diffusion_) {
   double k_stretch = sparams_ -> k_spring;
   double k_comp = sparams_ -> k_spring_compress;
   double r_l = sparams_ -> rest_length;
-  //Calculate the current energy
+  double r_a = sparams_ -> rest_angle;
+  double k_align = sparams_-> k_align;
+  double step_size_ = sphere_ -> GetStepSize();
   double del_l = cl_length_ - r_l;
+  double del_a = cl_angle_ - r_a; 
   if (del_l<0){
     k=k_comp;
   } else {
     k=k_stretch;
   }
-  double energy = 0.5 * k * pow((del_l), 2);   
-  double step_size_ = sphere_ -> GetStepSize();
-  double plus_diffusion = 0;
-  double minus_diffusion = 0;
+
+  //Calculate the current energy
+  double energy = 0.5 * k * pow((del_l), 2);
+  double energy_angle = 0.5 * k_align * pow((del_a), 2);
+  energy += energy_angle;
+
 
   //Calculating the chance the crosslinker will diffuse toward plus end
   //If distance has been set to -1 this means the anchor is already at
@@ -269,19 +265,23 @@ void Anchor::DecideToStepCrosslink(double discrete_diffusion_) {
     chance_forward_ = 0;
   }
   else {
-    //Calculate the energy change between current length and length at plus
+    //Calculate the energy change between current length/angle and length/angle at plus
     del_l = distance_to_plus_ - r_l;
+    del_a = angle_at_plus_ - r_a;
     if (del_l<0){
       k=k_comp;
     } else {
       k=k_stretch;
     }
     double energy_to_plus = 0.5 * k * pow(del_l, 2); 
+    double energy_angle_p = 0.5 * k_align * pow((del_a), 2);
+    //printf("angular energy %f, angle p energy %f \n", energy_angle, energy_angle_p);
+    energy_to_plus += energy_angle_p;  
     double e_change_to_p = energy_to_plus - energy;
     //Calculate Boltz factor assuming lambda = 1/2
     double boltz_factor_p = exp(-0.5 * e_change_to_p);
     //modify diffusion rate using Boltzmann factor
-    plus_diffusion = boltz_factor_p * D;
+    double plus_diffusion = boltz_factor_p * D;
     //See  equation 7.30 and 7.31 from "Molecular motors: thermodynamics and
     //the random walk" (Thomas et al. 2001). Equation rearranged to solve for
     //k+ and k-
@@ -289,31 +289,37 @@ void Anchor::DecideToStepCrosslink(double discrete_diffusion_) {
   } 
 
   //Calculate the chance the crosslinker will diffuse toward minus end
-  //If at minus end chance to duffuse further is zero
+  //If at minus end chance to diffuse further is zero
   if (distance_to_minus_ == -1) {
     chance_back_ = 0;
   }
   else {
     del_l = distance_to_minus_ - r_l;
+    del_a = angle_at_minus_ - r_a;
     if (del_l<0){
       k=k_comp;
     } else {
       k=k_stretch;
     }
-    //Calculate the energy change between current length and length at plus
+    //Calculate the energy change between current length and length at minus
     double energy_to_minus = 0.5 * k * pow((del_l), 2); 
+    double energy_angle_m = 0.5 * k_align * pow((del_a), 2);
+    //printf("angle m energy %f, angles, at base %f, plue %f, at minus %f \n", energy_angle_m, cl_angle_, angle_at_plus_, angle_at_minus_);
+    energy_to_minus+= energy_angle_m;   //Calculate Boltz factor assuming lambda = 1/2
     double e_change_to_m = energy_to_minus - energy;
-    //Calculate Boltz factor assuming lambda = 1/2
     double boltz_factor_m = exp(-0.5 * e_change_to_m);
     //modify diffusion rate using Boltzmann factor
-    minus_diffusion = boltz_factor_m * D;
+    double minus_diffusion = boltz_factor_m * D;
     //See  equation 7.30 and 7.31 from "Molecular motors: thermodynamics and
     //the random walk" (Thomas et al. 2001). Equation rearranged to solve for
     //k+ and k-
     chance_back_ = (minus_diffusion/pow(step_size_,2))*delta_;
   } 
+  //printf("Chance of anchor  %i hopping sites (chance back %f, chance forward %f) \n", this->GetOID(),chance_back_, chance_forward_);
+ //printf("cl angle is %f \n", cl_angle_);
 
-  if (chance_forward_>roll) {
+ //Calculate if crosslinker steps forward or backwords
+ if (chance_forward_>roll) {
     PrepareToStepForward(chance_forward_);
   }
   else if (chance_back_>(1-roll)) {
@@ -337,7 +343,7 @@ void Anchor::PrepareToStepForward(double prob) {
   }
   //If receptor is trying to move to an open receptor move.
   //If null that means the receptor is on edge of filament already.
-  //If NAnchored is 0, the next reeptor isn't occupied.
+  //If NAnchored is 0, the next receptor isn't occupied.
   if((next_receptor_ != NULL) && (next_receptor_ -> GetNAnchored() == 0 || single_occupancy == false)){
     (*bound_curr_)[next_receptor_].first.push_back(prob);
     std::pair<Anchor*, std::string> anchor_and_bind_type;
@@ -357,7 +363,7 @@ void Anchor::PrepareToStepBack(double prob) {
   if (last_receptor_ != NULL) {
    std::string name = last_receptor_->GetName();
     single_occupancy = bind_param_map_->at(index_)[name].single_occupancy;
-  } else if (plus_end_pausing_== false){
+  } else if (minus_end_pausing_== false){
     Unbind(); 
   }
   //If receptor is trying to move to an open receptor move
@@ -390,6 +396,24 @@ void Anchor::SetCrosslinkLength(double cl_length) {
   cl_length_ = cl_length;
 }
 
+
+//Set the angle to the plus neighbor of the other head of
+//the crosslinker
+void Anchor::SetAngleAtPlus(double angle) {
+  angle_at_plus_ = angle;
+}
+
+//Set the angle to the minus neighbor of the other head of
+//the crosslinker
+void Anchor::SetAngleAtMinus(double angle) {
+  angle_at_minus_ = angle;
+}
+
+//Set current length of crosslink anchor is a part off
+void Anchor::SetCrosslinkAngle(double cl_angle) {
+  cl_angle_ = cl_angle;
+}
+
 //Set pointer to the crosslink anchor is a part of
 void Anchor::SetCrosslinkPointer(Object* cl_pointer) {
   cl_pointer_ = cl_pointer;
@@ -398,7 +422,6 @@ void Anchor::SetCrosslinkPointer(Object* cl_pointer) {
 
 //Anchor steps in the minus direction
 void Anchor::StepBack() {
-  //Logger::Info("Stepped back");
   Sphere* last_receptor_ = nullptr;
   last_receptor_ = sphere_->GetMinusNeighbor();
   bool single_occupancy = true;
@@ -416,7 +439,6 @@ void Anchor::StepBack() {
 
 //Anchor steps in the plus direction
 void Anchor::StepForward() {
-  //Logger::Info("Stepped forward");
   Sphere* next_receptor_ = nullptr;
   next_receptor_ = sphere_->GetPlusNeighbor();
   bool single_occupancy = true;
@@ -501,7 +523,12 @@ double Anchor::DiscreteWalk() {
   }
   return vel;
 }
-    
+
+double Anchor::GetRodOrientation() {
+  double const *const rod_orientation_ = (sphere_ ->GetPCObjectForSphere()) -> GetOrientation();
+  return rod_orientation_[0];
+}
+
 // Check that the anchor is still located on the filament mesh
 // Returns true if anchor is still on the mesh, false otherwise
 bool Anchor::CheckMesh() {
@@ -528,8 +555,8 @@ bool Anchor::CheckMesh() {
 }
 
 void Anchor::Unbind() {
-  //Logger::Info("Anchor %i unbound", this->GetOID());
-  //Logger::Info("DeAttathed to %i", sphere_);
+  Logger::Trace("Anchor %i unbound", this->GetOID());
+  Logger::Trace("DeAttathed to %i", sphere_);
   if (static_flag_) {
     Logger::Error("Static anchor attempted to unbind");
   }
@@ -954,7 +981,7 @@ double Anchor::GetRecS() {
   }
 }
 
-//Get how far the anchor's receptor is on the filament (currently only set up for parallel and antiparallel) 
+//Check if anchor is still bound to receptor 
 bool Anchor::StillBound() {
   if (sphere_) {    
     return true;

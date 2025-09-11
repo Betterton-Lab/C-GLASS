@@ -108,11 +108,10 @@ next_cl:
             Crosslink* link_two = (*spec_two) -> GetCrosslink(j);
             //If link two is double bound and the crosslinkers aren't the same crosslinker
             if(link_two -> IsDoubly() && link_one -> GetOID() != link_two -> GetOID()) {
-              //Check if anchors still bound 
+              //Check if anchors still double bound 
               bool link_one_db = link_one -> StillDBound();
               bool link_two_db = link_two -> StillDBound();
               if (!(link_one_db && link_two_db)) {
-                Logger::Warning("Bools were %b, %b", link_one_db, link_two_db);
                 continue;
               }                         
               //Get how far the crosslinker anchors are along the filament
@@ -180,18 +179,13 @@ void CrosslinkManager::Knockout() {
     // If one anchor wants to bind to a receptor bind it
     if (receptor_info.first.size() == 1) {
       KnockoutBind(receptor, 0);
-
-      }
+    }
 
     //If two or three anchors want to bind to a receptor choose which one binds 
-    else if (receptor_info.first.size() == 2 || receptor_info.first.size() == 3) {
+    else if (receptor_info.first.size() >= 3 ) {
       double sum_of_probs = std::accumulate(receptor_info.first.begin(), receptor_info.first.end(), 0.0);
-      Logger::Trace("%i anchors want to bind to site %i with total probability %f. If this warning is common, or if probability is greater than 1 reduce time step.",
+      Logger::Warning("%i anchors want to bind to site %i with total probability %f. If this warning is common, or if probability is greater than 1 reduce time step.",
                      receptor_info.first.size(), receptor->GetOID(), sum_of_probs);
-        int events=1;
-        if (receptor_info.second[events].second == "forward step" || receptor_info.second[events].second == "back step" || receptor_info.second[events].second == "single to double") {
-         Logger::Trace("Prop is %f, Anchor is %i, Bind type is %s", receptor_info.first[events], receptor_info.second[events].first->GetOID(), receptor_info.second[events].second.c_str());
-        }
       double roll = sum_of_probs*rng_->RandomUniform();
       int count = 0;
       std::vector<double> prob_list = receptor_info.first;

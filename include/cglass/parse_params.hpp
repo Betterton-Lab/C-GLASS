@@ -184,6 +184,8 @@ system_parameters parse_system_params(YAML::Node &node) {
     params.single_occupancy = it->second.as<bool>();
     } else if (param_name.compare("turn_off_cell_list")==0) {
     params.turn_off_cell_list = it->second.as<bool>();
+    } else if (param_name.compare("cell_list_length")==0) {
+    params.cell_list_length = it->second.as<double>();
     } else {
       Logger::Warning("Unrecognized parameter '%s'", param_name.c_str());
     }
@@ -292,6 +294,8 @@ species_base_parameters *parse_species_params(std::string sid,
       params.constrain_motion_flag = jt->second.as<bool>();
       } else if (param_name.compare("constrain_to_move_in_y")==0) {
       params.constrain_to_move_in_y = jt->second.as<bool>();
+      } else if (param_name.compare("constrain_to_move_in_y_until")==0) {
+      params.constrain_to_move_in_y_until = jt->second.as<int>();
       } else if (param_name.compare("packing_fraction")==0) {
       params.packing_fraction = jt->second.as<double>();
       } else if (param_name.compare("n_equil")==0) {
@@ -302,6 +306,8 @@ species_base_parameters *parse_species_params(std::string sid,
       params.slide_start_time = jt->second.as<double>();
       } else if (param_name.compare("slide_end_point")==0) {
       params.slide_end_point = jt->second.as<double>();
+      } else if (param_name.compare("constant_force")==0) {
+      params.constant_force = jt->second.as<double>();
       } else {
         Logger::Warning("Unrecognized %s parameter: '%s'", sid.c_str(), param_name.c_str());
       }
@@ -719,8 +725,8 @@ species_base_parameters *parse_species_params(std::string sid,
       params.begin_with_bound_crosslinks = jt->second.as<int>();
       } else if (param_name.compare("begin_double_bound")==0) {
       params.begin_double_bound = jt->second.as<bool>();
-      } else if (param_name.compare("Add_at")==0) {
-      params.Add_at = jt->second.as<int>();
+      } else if (param_name.compare("add_at")==0) {
+      params.add_at = jt->second.as<int>();
       } else if (param_name.compare("no_binding")==0) {
       params.no_binding = jt->second.as<bool>();
       } else if (param_name.compare("no_solution_binding")==0) {
@@ -747,6 +753,10 @@ species_base_parameters *parse_species_params(std::string sid,
       params.force_dep_length = jt->second.as<double>();
       } else if (param_name.compare("motor_off")==0) {
       params.motor_off = jt->second.as<bool>();
+      } else if (param_name.compare("y_boost")==0) {
+      params.y_boost = jt->second.as<double>();
+      } else if (param_name.compare("k_0")==0) {
+      params.k_0 = jt->second.as<double>();
       } else if (param_name.compare("polar_affinity")==0) {
       params.polar_affinity = jt->second.as<double>();
       } else if (param_name.compare("k_spring")==0) {
@@ -759,6 +769,8 @@ species_base_parameters *parse_species_params(std::string sid,
       params.force_dep_vel_flag = jt->second.as<bool>();
       } else if (param_name.compare("k_align")==0) {
       params.k_align = jt->second.as<double>();
+      } else if (param_name.compare("rest_angle")==0) {
+      params.rest_angle = jt->second.as<double>();
       } else if (param_name.compare("rest_length")==0) {
       params.rest_length = jt->second.as<double>();
       } else if (param_name.compare("step_direction")==0) {
@@ -783,8 +795,6 @@ species_base_parameters *parse_species_params(std::string sid,
       params.exist_while_unbound = jt->second.as<bool>();
       } else if (param_name.compare("lut_grid_num")==0) {
       params.lut_grid_num = jt->second.as<int>();
-      } else if (param_name.compare("k_0")==0) {
-      params.k_0 = jt->second.as<double>();
       } else if (param_name.compare("anchors")==0) {
         for (size_t i = 0; i < jt->second.size(); ++i) {
           if (i > 1) {

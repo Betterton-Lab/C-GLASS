@@ -6,6 +6,7 @@ int CellList::_n_periodic_ = -1;
 int CellList::_n_cells_1d_ = -1;
 double CellList::_cell_length_ = -1;
 bool CellList::_no_init_ = true;
+double CellList::system_radius_ = -1;
 
 void CellList::SetMinCellLength(double l) {
   if (l > _min_cell_length_) {
@@ -16,10 +17,11 @@ void CellList::SetMinCellLength(double l) {
 double CellList::GetCellLength() { return _cell_length_; }
 
 void CellList::Init(int n_dim, int n_periodic, double system_radius, bool turn_off_cell_list) {
+  system_radius_=system_radius;
   if (turn_off_cell_list == true) {
     _n_cells_1d_ = 1;
   } else {
-    _n_cells_1d_ = (int)floor(2 * system_radius / _min_cell_length_);
+    _n_cells_1d_ = (int)floor(system_radius_/8);
   }
   _no_init_ = false;
 #ifdef TRACE
@@ -96,7 +98,7 @@ void CellList::AllocateCells() {
 
 void CellList::Clear() {
   if (_no_init_) return;
-  _n_cells_1d_ = -1;
+  _n_cells_1d_ = (int)floor(system_radius_/8);
   _no_init_ = true;
   ClearCellObjects();
   ClearCellNeighbors();
@@ -144,22 +146,20 @@ void CellList::MakePairs(std::vector<Interaction> &pair_list) {
 }
 
 xyz_coord CellList::FindCellCoords(Object &obj) {
-  const double *const spos = obj.GetScaledPosition();
-  double x = spos[0] + 0.5;
-  int xcell = (int)floor(_n_cells_1d_ * x);
-  if (xcell == _n_cells_1d_)
-    xcell -= 1;
-  double y = spos[1] + 0.5;
-  int ycell = (int)floor(_n_cells_1d_ * y);
-  if (ycell == _n_cells_1d_)
-    ycell -= 1;
-  int zcell = 0;
-  if (_n_dim_ == 3) {
-    double z = spos[2] + 0.5;
-    zcell = (int)floor(_n_cells_1d_ * z);
-    if (zcell == _n_cells_1d_)
-      zcell -= 1;
+  //const double *const spos = obj.GetScaledPosition();
+  const double *const spos = obj.GetPosition();
+  int xcell;
+  if (obj.GetName()=="rig1" ||obj.GetName()=="rig2") {
+    xcell = 0;
+  } else {
+    double x = spos[0]/system_radius_ + 0.5;
+    xcell = (int)floor(_n_cells_1d_ * x);
+    if (xcell == _n_cells_1d_)
+      xcell -= 1;
   }
+  int ycell = 0;
+  int zcell = 0;
+
   return std::make_tuple(xcell, ycell, zcell);
 }
 
@@ -195,6 +195,7 @@ void CellList::RenewObjectsCells(std::vector<Object *> &objs) {
 void CellList::AssignObjectsCells(std::vector<Object *> &objs) {
   Logger::Debug("Assigning objects to cells");
   for (auto obj = objs.begin(); obj != objs.end(); ++obj) {
+    //printf("Position is %f \n", (*obj)->GetPosition()[0]);
     int x, y, z;
     std::tie(x, y, z) = FindCellCoords(**obj);
 #ifdef TRACE

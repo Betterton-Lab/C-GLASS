@@ -34,11 +34,13 @@ struct species_parameters<species_id::rigid_filament>
   double min_length = 5;
   bool constrain_motion_flag = false;
   bool constrain_to_move_in_y = false;
+  int constrain_to_move_in_y_until = -1;
   double packing_fraction = -1;
   int n_equil = 0;
   double forced_slide_speed = 0;
   double slide_start_time = 0;
   double slide_end_point = 0;
+  double constant_force = 0;
 };
 typedef species_parameters<species_id::rigid_filament> rigid_filament_parameters;
 
@@ -170,7 +172,7 @@ struct species_parameters<species_id::crosslink>
   bool use_number = false;
   int begin_with_bound_crosslinks = 0;
   bool begin_double_bound = false;
-  int Add_at = 0;
+  int add_at = 0;
   bool no_binding = false;
   bool no_solution_binding = false;
   bool use_binding_volume = true;
@@ -184,12 +186,15 @@ struct species_parameters<species_id::crosslink>
   double energy_dep_factor = 0;
   double force_dep_length = 0;
   bool motor_off = false;
+  double y_boost = 1;
+  double k_0 = 1;
   double polar_affinity = 1;
   double k_spring = 10;
   double k_spring_compress = -1.;
   double f_stall = 100;
   bool force_dep_vel_flag = true;
   double k_align = 0;
+  double rest_angle = 1.2217;
   double rest_length = 0;
   int step_direction = 0;
   std::string tether_draw_type = "orientation";
@@ -202,7 +207,6 @@ struct species_parameters<species_id::crosslink>
   double f_to_s_radius = 1;
   bool exist_while_unbound = false;
   int lut_grid_num = 256;
-  double k_0 = 1;
   struct anchor_parameters {
     double velocity_s = 0;
     double velocity_d = 0;
@@ -320,6 +324,7 @@ struct system_parameters {
   bool no_midstep = false;
   bool single_occupancy = true;
   bool turn_off_cell_list = false;
+  double cell_list_length = 0;
 };
 
 #endif // _CGLASS_PARAMETERS_H_

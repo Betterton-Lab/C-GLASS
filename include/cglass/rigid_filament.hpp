@@ -22,6 +22,7 @@ private:
 
   bool zero_temperature_ = false;
   bool constrain_to_move_in_y_ = false;
+  int constrain_to_move_in_y_until_ = 0;
   int n_step_ = 0;
   int eq_steps_ = 0;
   int eq_steps_count_ = 0;

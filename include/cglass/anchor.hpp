@@ -48,8 +48,11 @@ class Anchor : public Object {
   double partner_on_d_;
   double distance_to_plus_;
   double distance_to_minus_;
+  double angle_at_plus_;
+  double angle_at_minus_;
   std::map<Sphere *, std::pair<std::vector<double>, std::vector<std::pair<Anchor*, std::string> > > > *bound_curr_ = nullptr;
   double cl_length_;
+  double cl_angle_;
   Object* cl_pointer_ = nullptr;
   double k_off_s_;
   double k_off_d_;
@@ -97,6 +100,9 @@ class Anchor : public Object {
   void SetLengthAtPlus(double distance_);
   void SetLengthAtMinus(double distance_);
   void SetCrosslinkLength(double cl_length);
+  void SetAngleAtPlus(double angle_);
+  void SetAngleAtMinus(double angle_);
+  void SetCrosslinkAngle(double cl_angle);
   void SetCrosslinkPointer(Object* cl_pointer);
   Object* GetCrosslinkPointer() {return cl_pointer_;}
   void SetBoundCurr(std::map<Sphere *, std::pair<std::vector<double>, std::vector<std::pair<Anchor*, std::string> > > > *bound_curr);
@@ -109,6 +115,7 @@ class Anchor : public Object {
   void SetChangedThisStep();
   void ResetChangedThisStep();
   bool GetChangedThisStep();
+  double GetRodOrientation();
   void Activate();
   void Deactivate();
   void ApplyAnchorForces();

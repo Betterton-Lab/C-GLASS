@@ -16,7 +16,6 @@ void CrosslinkSpecies::Init(std::string spec_name, ParamsParser &parser) {
   if (sparams_.use_number==false) {
     sparams_.num = (int)round(sparams_.concentration * space_->volume);
   }
-  printf("number is %d \n", sparams_.num);
   std::vector<std::string> bind_file = {sparams_.anchors[0].bind_file, sparams_.anchors[1].bind_file};
   
   // Create a default set of specific binding parameters
@@ -196,6 +195,14 @@ void CrosslinkSpecies::TestKMCStepSize() {
 
 LUTFiller *CrosslinkSpecies::MakeLUTFiller() {
   int grid_num = sparams_.lut_grid_num;
+  //if (sparams_.k_align > 0) {
+  //  LUTFillerAsym *lut_filler_ptr = new LUTFillerTor(grid_num, grid_num);
+  //  lut_filler_ptr->Init(sparams_.k_spring_compress, sparams_.k_spring,
+  //                       sparams_.energy_dep_factor, sparams_.rest_length,
+  //                       sparams_.k_align, sparams_.rest_angle, 1);
+  //  return lut_filler_ptr;
+
+
   if (sparams_.k_spring_compress >= 0) {
     Logger::Warning("!!!Asymmetric springs are being used. This has not been "
                     "fully tested. Use at your own risk!");
@@ -340,8 +347,7 @@ void CrosslinkSpecies::InsertAttachedCrosslinksSpecies(std::vector<std::vector<O
       BindDoubly(receptor_list[0][i], receptor_list[1][i]);
       members_.back().SetGlobalCheckForCross(global_check_for_cross_);
     }
-  }
-     
+  } 
 }
 
 // Calculate and bind crosslinkers from solution implicitly
@@ -356,7 +362,6 @@ void CrosslinkSpecies::CalculateBindingFree() {
                                   // crosslinkers binding from solution
     free_concentration = xlink_concentration_;
   } else { // Have a constant number of crosslinkers in a space
-    //printf("Number is %i \n",sparams_.num - n_members_);
     free_concentration = (sparams_.num - n_members_) / space_->volume;
   }
   if (use_bind_file_) {
@@ -578,7 +583,7 @@ void CrosslinkSpecies::UpdatePositions() {
   if (!params_->on_midstep) {
     /* First update bound crosslinks state and positions */
     UpdateBoundCrosslinks();
-    if (sparams_.no_binding == false && sparams_.no_solution_binding == false && sparams_.exist_while_unbound == false && step_count_>sparams_.Add_at){
+    if (sparams_.no_binding == false && sparams_.no_solution_binding == false && sparams_.exist_while_unbound == false && step_count_>sparams_.add_at){
       /* Calculate implicit binding of crosslinks from solution */
       CalculateBindingFree();
     }

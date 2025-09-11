@@ -23,7 +23,11 @@ public:
       MaxForceViolation();
     }
     for (int i = 0; i < n_dim_; ++i) {
-      if (rmag<rcut_-4){
+      double offset=0;
+      if (wham_mag_!=0) {
+       offset=4;
+      }
+      if (rmag<rcut_-offset){
       	ix.force[i] = ffac * dr[i] * rinv;
       } else {
         ix.force[i] = 0;
@@ -31,13 +35,13 @@ public:
     }
     if (wham_mag_!=0) {
      ix.force[1] += -wham_mag_*(-dr[1]-wham_cen_);
-     //printf("adding wham %f, %f, %f, \n", wham_mag_, dr[1], wham_cen_);
+     //printf("adding wham mag=%f, distance=%f, cen=%f, \n", wham_mag_, dr[1], wham_cen_);
     }
 
     for (int i = 0; i < n_dim_; ++i)
       for (int j = 0; j < n_dim_; ++j)
         ix.stress[n_dim_ * i + j] = -dr[i] * ix.force[j];
-        ix.pote = r6 * (c12_ * r6 - c6_) + eps_+0.5*wham_mag_*(dr[1]-wham_cen_)*(dr[1]-wham_cen_);
+    ix.pote = r6 * (c12_ * r6 - c6_) + eps_+0.5*wham_mag_*(dr[1]-wham_cen_)*(dr[1]-wham_cen_);
   }
 
   void InitPotentialParams(system_parameters *params) {

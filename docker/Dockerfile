@@ -1,4 +1,4 @@
-FROM jeffmm/simcore_base:latest
+FROM dasteck/cglass:separation
 WORKDIR /build
 RUN git clone --recursive --single-branch --branch separation_paper https://github.com/Betterton-Lab/C-GLASS.git . &&\
     ./install.sh -otI

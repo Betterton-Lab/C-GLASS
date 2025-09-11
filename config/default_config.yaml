@@ -81,8 +81,9 @@ static_particle_number: [false, bool] # Tells interaction engine that particle n
                                       # change, circumventing certain book-keeping functions.
 checkpoint_from_spec: [false, bool]  # Generate a checkpoint file from an existing spec file.
 potential: [wca, string]             # Specifies interaction potential between all particles.
-wham_mag: [0, double]
-wham_cen: [0, double]
+wham_mag: [0, double]                # Magintude and center of harmonic potential between microtubules, used for 
+wham_cen: [0, double]                # WHAM (Weighted Histogram Analysis Method). Only designed for parallel or 
+                                     # antiparallel microtubules. 
 reflect_at_boundary: [false, bool]   # If true particles outside the set boundary are relfected back inside,
                                      # only set up for sphere and protrusion boundaries
 soft_potential_mag: [10, double]     # Energy scaling parameter for GEM-8 potential.
@@ -117,6 +118,7 @@ no_midstep: [false, bool]            # Specify the simulation is not using a mid
 single_occupancy: [true, bool]       # when set to false the sites can be occupied by multiple crosslinkers
                                      # not yet set up to be false with binding/unbinding on
 turn_off_cell_list: [false, bool]    # If set to true there will only be one cell.
+cell_list_length: [0, double]        # Set range of x-coordinates used for cell list   
 
 species:                             # Shared parameters used for all species.
   name: [species, string]            # Label given to species (e.g. microtubule, kinesin, etc)
@@ -158,12 +160,14 @@ rigid_filament:
   constrain_to_move_in_y: [false, bool] # Filaments won't rotate and will only move in the y direction 
 					#(note: it seems the constrain_motion_flag is supposed to due this,
 					#but it's not working)
+  constrain_to_move_in_y_until: [-1, int] # Rigid filaments wont move in y until this time step
   packing_fraction: [-1, double]    # if num > 0, and packing fraction > 0, filaments are inserted
   #                                  # until the ratio filament to system volumes match this value.
   n_equil: [0, int]                 # internal filament parameter used for shuffling.
   forced_slide_speed: [0, double]   # If forced slide speed is set filaments moves at the set fixed speed in the
   slide_start_time: [0, double]     # x direction starting at slide_start_time until their centers reach
   slide_end_point: [0, double]      # slide_end_point
+  constant_force: [0, double]       # Applies a constant force to the filament along the x-axis
 
 filament:                            # Parameters unique to filament class of objects.
   packing_fraction: [-1, double]    # if num > 0, and packing fraction > 0, filaments are inserted
@@ -324,13 +328,13 @@ crosslink:                          # Parameters specific to crosslinks.
                                     # boundaries.
   use_number: [false, bool]         # If set to true the concentration peramter is overwritten and crosslinkers are set by the num param instead
   begin_with_bound_crosslinks: [0, int]   # if greater than 0 the simultion begins with the specified number
-                                    # of crosslinkers singly attached to microtubules
-  begin_double_bound: [false, bool]  # Crosslinks from begin with_with_bound_crosslinks start double
-  Add_at: [0, int]                  # The time step where the crosslink is added to the experiment
-                                    # bound. Only programmed for two parallel filaments. 
-  no_binding: [false, bool]         # With flag set to true crosslinks wont bind or unbind
-  no_solution_binding: [false, bool] # With flag set to true croeelinks will switch bewtween singly and double
-                                    # states but wont bind from solution or return to solution
+                                    # of crosslinkers singly attached to microtubules.
+  begin_double_bound: [false, bool] # Crosslinks from "begin_with_bound_crosslinks" start double
+                                    # bound. Only programmed for two parallel/antiparallel filaments.
+  add_at: [0, int]                  # The time step where crosslink species is added to solution.  
+  no_binding: [false, bool]         # With flag set to true crosslinks wont bind or unbind.
+  no_solution_binding: [false, bool] # With flag set to true crosslinks will switch between singly and double
+                                    # states but wont bind from solution or return to solution.
   use_binding_volume: [true, bool]  # Calculate concentration of unbound head of 
                                     # singly bound protein by finding a binding 
                                     # volume in which it is statistically likely
@@ -352,7 +356,10 @@ crosslink:                          # Parameters specific to crosslinks.
                                     # force-dependent off-rate of doubly-bound 
                                     # crosslinks when under a load. 
                                     # (x_c > 0 = slip bond, x_c < 0 = catch bond)
-  motor_off: [false, bool]          
+  motor_off: [false, bool]          # When set to true, unbinding is only force dependant and asymmetric for motors
+                                    # currently set based on the unbinding curve for kinesin-5. 
+  y_boost: [1, double]              # Amount to boost y off rate by 
+  k_0: [1, double]                  # Base off rate used when motor_off=True
   polar_affinity: [1, double]       # Ratio of (probability of binding for antiparallel)/(probability 
                                     # of binding parallel)  
   k_spring: [10, double]            # Spring constant of doubly-bound crosslinks.
@@ -363,6 +370,7 @@ crosslink:                          # Parameters specific to crosslinks.
   force_dep_vel_flag: [true, bool]  # Flag that causes walking crosslink heads 
                                     # to have force-dependent velocity.
   k_align: [0, double]              # Torsion spring constant for alignment of crosslink.
+  rest_angle: [1.2217, double]      # Rest angle for torsional spring
   rest_length: [0, double]          # Spring rest length of crosslink tether.
   step_direction: [0, int]          # Sets walker direction. If negative, walks toward filament
                                     # tail. If positive, walks toward filament head.
@@ -382,7 +390,6 @@ crosslink:                          # Parameters specific to crosslinks.
   exist_while_unbound: [false, bool] # If true crosslinks are simulated while not bound to a filament
   lut_grid_num: [256, int]          # Number of grid points used in one dimension of the the lookup table (LUT).
                                     # Total entries go as the square of this number e.g. 256 x 256
-  k_0: [1, double]
 
   anchors:
     velocity_s: [0, double]           # Bound crosslink head velocities when walkers are singly bound.

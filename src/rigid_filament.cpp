@@ -16,6 +16,7 @@ void RigidFilament::SetParameters() {
   min_length_ = sparams_->min_length;
   zero_temperature_ = params_->zero_temperature; // include thermal forces
   constrain_to_move_in_y_ = sparams_->constrain_to_move_in_y;
+  constrain_to_move_in_y_until_ = sparams_->constrain_to_move_in_y_until;
   eq_steps_count_ = 0;
 
   /* Refine parameters */
@@ -115,8 +116,11 @@ void RigidFilament::Integrate() {
     double t_dot_u = dot_product(3, torque_, constrain_vec_);
     for (int i = 0; i < 3; ++i) {
       force_eff[i] -= f_dot_u * constrain_vec_[i];
-      //torque_eff[i] = t_dot_u * constrain_vec_[i];
+      torque_eff[i] = t_dot_u * constrain_vec_[i];
     }
+  }
+  if (!constrain_to_move_in_y_ && constrain_to_move_in_y_until_<eq_steps_count_) {
+    force_eff[0]-=sparams_->constant_force;
   }
   // Construct mobility matrix
   for (int i = 0; i < n_dim_; ++i) {
@@ -134,19 +138,18 @@ void RigidFilament::Integrate() {
   for (int i = 0; i < n_dim_; ++i) {
     for (int j = 0; j < n_dim_; ++j) {
       position_[i] += mob_mat[i * n_dim_ + j] * force_eff[j] * delta_;
-      //if (i==0 && j==0) {
-      //  Logger::Info("Gamma is %f, %f", gamma_par_, gamma_perp_);
-      //}
     }
   }
   // Reorientation due to external torques
   double du[3];
   cross_product(torque_eff, orientation_, du, 3); // ndim=3 since torques
-  //for (int i = 0; i < n_dim_; ++i) {
-  //  orientation_[i] += du[i] * delta_ / gamma_rot_;
+  //if (!constrain_to_move_in_y_){
+  //  for (int i = 0; i < n_dim_; ++i) {
+  //    orientation_[i] += du[i] * delta_ / gamma_rot_;
+  //  }
   //}
   normalize_vector(orientation_, n_dim_);
-  if (!zero_temperature_ && !constrain_to_move_in_y_) {
+  if (!zero_temperature_ && (!constrain_to_move_in_y_ && constrain_to_move_in_y_until_<eq_steps_count_)) {
     // Add the random displacement dr(t)
     AddRandomDisplacement();
     // Update the orientation due to torques and random rotation
@@ -154,10 +157,10 @@ void RigidFilament::Integrate() {
   }
   //With constrain_to_move_in_y on filaments don't roate and only diffuse in
   //the y direction
-  if (!zero_temperature_ && constrain_to_move_in_y_) {
+  if (!zero_temperature_ && (constrain_to_move_in_y_ || constrain_to_move_in_y_until_>eq_steps_count_)) {
      //Add the random displacement dr(t)
      AddRandomYDisplacement();
-     //temp
+     //tempi
      //AddRandomDisplacement();
   }
 
@@ -183,14 +186,7 @@ void RigidFilament::AddRandomDisplacement() {
     mag = rng_.RandomNormal(diffusion_perp_);
     for (int i = 0; i < n_dim_; ++i)
       position_[i] += mag * body_frame_[n_dim_ * j + i];
-  }
-  //if (position_[1]<1) {
-  // position_[1]=1; 
-  //}
-  //if (position_[1]>2.4) {
-  // position_[1]=2.4; 
-  //}
-  
+  } 
   // Handle the random orientation update after updating orientation from
   // interaction torques
 }
@@ -253,8 +249,11 @@ void RigidFilament::SetDiffusion() {
   double L = length_ + diameter_;
   double p = L / diameter_;
   double log_p = log(p);
-  gamma_par_ = 2.0 * L / 3.0 / (log_p - 0.207 + 0.980 / p - 0.133 / SQR(p));
-  gamma_perp_ = 4.0 * L / 3.0 / (log_p + 0.839 + 0.185 / p + 0.233 / SQR(p));
+  double eta = 0.1067; //eta=0.01067;
+  gamma_par_= 2*M_PI*eta*length_/(log_p-0.2);
+  //gamma_par_ = 2.0 * L / 3.0 / (log_p - 0.207 + 0.980 / p - 0.133 / SQR(p));
+  //printf("gamma_par_ is %f, %f, %f, %f \n", gamma_par_, length_, M_PI, log_p);
+  gamma_perp_= 4*M_PI*eta*length_/(log_p+0.84);
   gamma_rot_ = CUBE(L) / 9.0 / (log_p - 0.662 + 0.917 / p - 0.050 / SQR(p));
   diffusion_par_ = sqrt(2 * delta_ / gamma_par_);
   diffusion_perp_ = sqrt(2 * delta_ / gamma_perp_);
@@ -271,7 +270,7 @@ double const RigidFilament::GetVolume() {
 }
 
 void RigidFilament::UpdatePosition() {
-  if (!constrain_to_move_in_y_){
+  if (!constrain_to_move_in_y_ && constrain_to_move_in_y_until_<eq_steps_count_){
     ApplyForcesTorques();
   }
   else {
@@ -354,10 +353,6 @@ void RigidFilament::ApplyForcesTorquesYOnly() {
     if (i==1){
       force_[i] += force[1];
     }
-    //temp
-    //if (i==0){
-    //  force_[i] += force[0];
-    //}
     else {
       force_[i]=0;
     }

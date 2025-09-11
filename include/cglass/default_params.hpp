@@ -19,11 +19,13 @@
   default_config["rigid_filament"]["min_length"] = "5";
   default_config["rigid_filament"]["constrain_motion_flag"] = "false";
   default_config["rigid_filament"]["constrain_to_move_in_y"] = "false";
+  default_config["rigid_filament"]["constrain_to_move_in_y_until"] = "-1";
   default_config["rigid_filament"]["packing_fraction"] = "-1";
   default_config["rigid_filament"]["n_equil"] = "0";
   default_config["rigid_filament"]["forced_slide_speed"] = "0";
   default_config["rigid_filament"]["slide_start_time"] = "0";
   default_config["rigid_filament"]["slide_end_point"] = "0";
+  default_config["rigid_filament"]["constant_force"] = "0";
   default_config["filament"]["packing_fraction"] = "-1";
   default_config["filament"]["persistence_length"] = "400";
   default_config["filament"]["perlen_ratio"] = "-1";
@@ -151,7 +153,7 @@
   default_config["crosslink"]["use_number"] = "false";
   default_config["crosslink"]["begin_with_bound_crosslinks"] = "0";
   default_config["crosslink"]["begin_double_bound"] = "false";
-  default_config["crosslink"]["Add_at"] = "0";
+  default_config["crosslink"]["add_at"] = "0";
   default_config["crosslink"]["no_binding"] = "false";
   default_config["crosslink"]["no_solution_binding"] = "false";
   default_config["crosslink"]["use_binding_volume"] = "true";
@@ -165,12 +167,15 @@
   default_config["crosslink"]["energy_dep_factor"] = "0";
   default_config["crosslink"]["force_dep_length"] = "0";
   default_config["crosslink"]["motor_off"] = "false";
+  default_config["crosslink"]["y_boost"] = "1";
+  default_config["crosslink"]["k_0"] = "1";
   default_config["crosslink"]["polar_affinity"] = "1";
   default_config["crosslink"]["k_spring"] = "10";
   default_config["crosslink"]["k_spring_compress"] = "-1.";
   default_config["crosslink"]["f_stall"] = "100";
   default_config["crosslink"]["force_dep_vel_flag"] = "true";
   default_config["crosslink"]["k_align"] = "0";
+  default_config["crosslink"]["rest_angle"] = "1.2217";
   default_config["crosslink"]["rest_length"] = "0";
   default_config["crosslink"]["step_direction"] = "0";
   default_config["crosslink"]["tether_draw_type"] = "orientation";
@@ -183,7 +188,6 @@
   default_config["crosslink"]["f_to_s_radius"] = "1";
   default_config["crosslink"]["exist_while_unbound"] = "false";
   default_config["crosslink"]["lut_grid_num"] = "256";
-  default_config["crosslink"]["k_0"] = "1";
   default_config["receptor"]["component"] = "cortex";
   default_config["receptor"]["concentration"] = "-1";
   default_config["receptor"]["induce_catastrophe"] = "false";
@@ -274,3 +278,4 @@
   default_config["no_midstep"] = "false";
   default_config["single_occupancy"] = "true";
   default_config["turn_off_cell_list"] = "false";
+  default_config["cell_list_length"] = "0";

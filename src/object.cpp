@@ -248,6 +248,7 @@ void Object::UpdatePeriodic() {
   periodic_boundary_conditions(space_->n_dim, space_->n_periodic,
                                space_->unit_cell, space_->unit_cell_inv,
                                position_, s);
+  //printf("s is %f, %f, %f \n", s[0], s[1], s[2]);
   SetScaledPosition(s);
   UpdateKMC();
 }

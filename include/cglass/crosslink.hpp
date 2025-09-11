@@ -30,10 +30,11 @@ private:
   double rcapture_;
   double bind_site_density_;
   double tether_force_;
-  double off_calc_fx_;
-  double off_calc_fy_;
+  double off_calc_fx_[2];
+  double off_calc_fy_[2];
   double e_dep_factor_;
   double fdep_length_;
+  double bind_cutoff_;
   double polar_affinity_;
   bool use_bind_file_;
   int bound_anchor_ = 0; // Index of anchor that is bound if Singly

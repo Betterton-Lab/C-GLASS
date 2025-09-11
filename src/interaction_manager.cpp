@@ -39,7 +39,7 @@ void InteractionManager::InitInteractions() {
   potentials_.InitPotentials(params_);
   CellList::SetMinCellLength(sqrt(potentials_.GetRCut2()));
 
-  CellList::Init(params_->n_dim, params_->n_periodic, params_->system_radius, params_->turn_off_cell_list);
+  CellList::Init(params_->n_dim, params_->n_periodic, params_->cell_list_length, params_->turn_off_cell_list);
   Logger::Info("Constructing cell list data structure");
   clist_.BuildCellList();
 
@@ -767,6 +767,11 @@ void InteractionManager::Reset() {
 void InteractionManager::AddInteractors(std::vector<Object *> &ixs) {
   clist_.AssignObjectsCells(ixs);
   ix_objects_.insert(ix_objects_.end(), ixs.begin(), ixs.end());
+  printf("Testing\n");
+  for (auto *obj : ix_objects_) {
+       // Do something with obj
+     printf("position is %f\n", obj->GetPosition()[0]);
+  }
 }
 
 void InteractionManager::DrawInteractions(

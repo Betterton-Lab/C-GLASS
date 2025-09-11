@@ -19,6 +19,7 @@ private:
   void AssignCellNeighbors(bool redundancy=false);
   xyz_coord FindCellCoords(Object &obj);
   void ClearCellNeighbors();
+  static double system_radius_;
 
 public:
   CellList() {}

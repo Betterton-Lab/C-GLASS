@@ -1,6 +1,7 @@
 #include "cglass/crosslink.hpp"
 #include <iostream>
-
+#include <thread>
+#include <chrono>
 Crosslink::Crosslink(unsigned long seed) : Object(seed) {
   SetSID(species_id::crosslink);
 }
@@ -37,6 +38,7 @@ void Crosslink::Init(crosslink_parameters *sparams) {
   free_diffuse_kick_ = sqrt(2*sparams_->diffusion_free*params_->delta);
   Logger::Trace("Initializing crosslink %d with anchors %d and %d", GetOID(),
                 anchors_[0].GetOID(), anchors_[1].GetOID());
+  bind_cutoff_ = sqrt(2*7/k_spring_);  //Don't calculate bind detatils if energy is greater than 7 kT 
 }
 
 void Crosslink::InitInteractionEnvironment(LookupTable *lut, Tracker *tracker, 
@@ -62,6 +64,7 @@ void Crosslink::GetAnchors(std::vector<Object *> &ixors) {
     ixors.push_back(&anchors_[(int)!bound_anchor_]);
   }
 }
+
 
 //Perform kinetic monte carlo step for an unbound crosslinker, only used if exist_while_unbound flag is on
 void Crosslink::FreeKMC () {
@@ -168,7 +171,192 @@ void Crosslink::FreeKMC () {
   }
 }
 
+
 /* Perform kinetic monte carlo step of protein with 1 head attached. */
+
+void Crosslink::SinglyKMC() {
+  //printf("new calc \n");
+  double linear_energy;
+  double torsional_energy;
+  double time_before = cpu_time();
+  double roll = rng_.RandomUniform();
+  int head_bound = 0;
+  // Set up KMC objects and calculate probabilities
+
+  double unbind_prob = anchors_[bound_anchor_].GetOffRate() * delta_;
+  if (static_flag_ || sparams_->no_solution_binding) {
+    unbind_prob = 0;
+  }
+  tracker_->TrackSU(unbind_prob);
+  int n_neighbors= anchors_[bound_anchor_].GetNNeighborsSphere();
+  //printf("Neighbor numbers are, %d, %f \n",n_neighbors,anchors_[bound_anchor_].pos[0]); 
+  
+  KMC<Rod, Sphere> kmc_bind(anchors_[bound_anchor_].pos, 0, n_neighbors, delta_, lut_);
+  kmc_bind.SetPBCs(n_dim_, space_->n_periodic, space_->unit_cell);
+  // Calculate probability to bind
+  double kmc_bind_prob = 0;
+  double new_bind_prob = 0;
+  std::vector<double> bind_factors(n_neighbors);
+  std::vector<double> bind_rates(n_neighbors);
+  const std::vector<const Sphere*>& sphere_nbr_list = anchors_[bound_anchor_].GetNeighborListMemSpheres();
+  
+  if (use_bind_file_) {
+    for (int i = 0; i < sphere_nbr_list.size(); ++i) {
+      std::string name = sphere_nbr_list[i]->GetName();
+      bind_factors[i] =
+               bind_param_map_->at((int)!bound_anchor_)[name].k_on_d;
+               //* bind_param_map_->at((int)!bound_anchor_)[name].bind_site_density;
+    }
+  } else {
+  double bind_factor_sphere = anchors_[(int)!bound_anchor_].GetOnRate() * bind_site_density_;
+
+  // Fill vector of bind factors with rod factors, then sphere factors
+    
+    std::fill(bind_factors.begin(), bind_factors.end(), bind_factor_sphere);
+  }
+ 
+  if (n_neighbors > 0) {
+    if (!static_flag_ && polar_affinity_ != 1.0) {
+      anchors_[bound_anchor_].CalculatePolarAffinity(bind_factors);
+    }
+    //Use auto-filter populated with 1's for every neighbor.
+    //We already guarantee uniqueness, so we won't overcount.
+    const double *const bound_position = anchors_[bound_anchor_].GetPosition();
+    for (int i = 0; i < sphere_nbr_list.size(); ++i) {
+       const double *const bind_to_position = sphere_nbr_list[i]->GetPosition();
+       double bind_length = sqrt(SQR(bound_position[0]-bind_to_position[0])+SQR(bound_position[1]-bind_to_position[1]));
+       double stretch = bind_length-rest_length_;
+       if (abs(stretch)>bind_cutoff_) {
+         bind_rates[i]=0;
+         continue;
+       }
+       //Calc linear energy
+       double linear_energy = 0.5*k_spring_*SQR(stretch);
+       double torsional_energy = 0;
+       std::vector<double> bind_vector(2);
+       bind_vector[0]= (anchors_[bound_anchor_].GetPosition()[0]-sphere_nbr_list[i]->GetPosition()[0])/bind_length;
+       bind_vector[1]= (anchors_[bound_anchor_].GetPosition()[1]-sphere_nbr_list[i]->GetPosition()[1])/bind_length;
+       
+      if (sparams_->k_align>0){
+           double angle=0;
+    	   if (bind_vector[1]>0) {
+              angle=acos(bind_vector[0]);
+           } else {
+              angle=acos(-bind_vector[0]);
+           }
+           torsional_energy = 0.5*(sparams_->k_align)*(sparams_->rest_angle-angle)*(sparams_->rest_angle-angle);
+       }
+       
+       double energy = linear_energy + torsional_energy;
+       double bind_rate = bind_factors[i] * delta_ * exp(-0.5*energy);
+       //printf("i=%i linear and torsion energies are (inside) %f, %f , for vector %f, %f \n", i, linear_energy, torsional_energy,bind_vector[0], bind_vector[1]);
+       //printf("constant and exponential are, %f, %f \n", bind_factors[i]*delta_, exp(-0.5*energy));
+       new_bind_prob += bind_rate;
+       bind_rates[i]=bind_rate;
+       //printf("positions are %f, %f, %f, %f \n", anchors_[bound_anchor_].GetPosition()[0],sphere_nbr_list[i]->GetPosition()[0], bind_rate, anchors_[bound_anchor_].GetPosition()[1]-sphere_nbr_list[i]->GetPosition()[1]);     
+       
+       //CalcBindProp();
+    }
+    //kmc_bind_prob=.1;
+    //kmc_bind.LUCalcTotProbsSD(anchors_[bound_anchor_].GetNeighborListMemRods(), 
+    //                          anchors_[bound_anchor_].GetNeighborListMemSpheres(), 
+    //                         anchors_[bound_anchor_].GetBoundOID(), bind_factors); 
+    //kmc_bind_prob = kmc_bind.getTotProb();
+    //tracker_->TrackSD(kmc_bind_prob);
+  } 
+  // Find out whether we bind, unbind, or neither.
+  //printf("bind props are, %f, %f \n", unbind_prob, new_bind_prob);
+  int head_activate = choose_kmc_double(unbind_prob, new_bind_prob, roll);
+  // Change status of activated head
+  if (head_activate == 0 && anchors_[bound_anchor_].GetChangedThisStep()==false) {
+    // Unbind bound head
+    // Track unbinding
+    tracker_->UnbindSU();
+    if (anchors_[bound_anchor_].GetReachedPlusEnd()) {
+      anchors_[bound_anchor_].SubtractFilEndProteins(true);
+      anchors_[bound_anchor_].SetReachedPlusEnd(false);
+    }
+    //If unbound crosslinkers are tracked, release crosslink instead of deleting it
+    if (free_flag_) {
+      SetFree(bound_anchor_);
+      anchors_[bound_anchor_].Unbind();
+      anchors_[0].SetBound();
+      anchors_[1].SetUnbound();
+      return;
+    }
+    else {
+      anchors_[bound_anchor_].Unbind();
+      SetUnbound();
+      Logger::Trace("Crosslink %i with anchor %i came unbound", GetOID(), anchors_[bound_anchor_].GetOID()); 
+    }
+  } else if (head_activate == 1) {
+    //printf("linear and torsion energies are (head activate) %f, %f, bind prob is %f \n", linear_energy, torsional_energy, new_bind_prob);
+    // for (int i = 0; i < sphere_nbr_list.size(); ++i) {
+    //	printf("%f \n", bind_rates[i]);
+    //}   
+    // Biind unbound head
+    // Track binding
+    tracker_->BindSD();
+    //Position on rod where protein will bind with respect to center of rod,
+    //passed by reference
+    double bind_lambda;
+    //Find out which rod we are binding to 
+    int i_bind;
+    //Figure out which site to bind to  
+    double roll = rng_.RandomUniform()*new_bind_prob;
+    for (int i = 0; i < sphere_nbr_list.size(); ++i) {
+    	roll-=bind_rates[i];
+	if (roll<=0){
+	  i_bind=i;
+          //printf("i bind is %i \n", i_bind);
+	  break;
+	}
+    }
+    //printf("positions are %f, %f, ppp %f, %f \n", anchors_[bound_anchor_].GetPosition()[0],anchors_[bound_anchor_].GetPosition()[1],sphere_nbr_list[i_bind]->GetPosition()[0], sphere_nbr_list[i_bind]->GetPosition()[1]);
+    //std::cin.get();  // waits for Enter
+    //int i_bind = kmc_bind.whichObjBindSD(bind_lambda, roll);
+    if (i_bind < 0) {
+      //printf("i_bind = %d\nbind_lambda = %2.2f\n", i_bind, bind_lambda);
+      Logger::Error("kmc_bind.whichRodBindSD in Crosslink::SinglyKMC"
+                    " returned an invalid result!");
+    }
+    if (anchors_[bound_anchor_].GetReachedPlusEnd()) {
+      anchors_[bound_anchor_].SubtractFilEndProteins(false);
+      anchors_[bound_anchor_].SetReachedPlusEnd(false);
+    }
+     
+      Sphere *bind_obj = anchors_[bound_anchor_].GetSphereNeighbor(i_bind);
+      (*bound_curr_)[bind_obj].first.push_back(kmc_bind.getProb(i_bind));
+      std::pair<Anchor*, std::string> anchor_and_bind_type;
+      anchors_[(int)!bound_anchor_].SetCrosslinkPointer(this);
+      anchor_and_bind_type.first = &anchors_[(int)!bound_anchor_];
+      anchor_and_bind_type.second = "single to double";
+      //Add anchor to bound_curr, will be deciding if it binds during knockout
+      (*bound_curr_)[bind_obj].second.push_back(anchor_and_bind_type);
+      Logger::Trace("Crosslink %d, with anchor %d, became doubly bound to obj %d", GetOID(), anchors_[(int)!bound_anchor_].GetOID(),
+                  bind_obj->GetOID());
+      //If crosslinkers can't cross check if newly bound crosslinker is crossing
+      if (sparams_ -> cant_cross == true) {
+        check_for_cross = true;
+        last_bound_ = (int)!bound_anchor_;
+        if (*global_check_for_cross_ == true) {
+        } else {
+          *global_check_for_cross_ = true;
+        }
+      }
+    
+  }
+ double time_after = cpu_time();
+ //printf("time before is %f, time after is %f \n", time_before, time_after);
+}
+
+
+
+
+
+
+/* Perform kinetic monte carlo step of protein with 1 head attached. */
+/*
 void Crosslink::SinglyKMC() {
   double roll = rng_.RandomUniform();
   int head_bound = 0;
@@ -182,13 +370,13 @@ void Crosslink::SinglyKMC() {
   int n_neighbors_sphere = anchors_[bound_anchor_].GetNNeighborsSphere();
   int n_neighbors = n_neighbors_rod + n_neighbors_sphere;
  
-  /* Initialize KMC calculation */
+  // Initialize KMC calculation 
   KMC<Rod, Sphere> kmc_bind(anchors_[bound_anchor_].pos, n_neighbors_rod, n_neighbors_sphere, delta_, lut_);
 
-  /* Initialize periodic boundary conditions */
+  // Initialize periodic boundary conditions 
   kmc_bind.SetPBCs(n_dim_, space_->n_periodic, space_->unit_cell);
 
-  /* Calculate probability to bind */
+  // Calculate probability to bind 
   double kmc_bind_prob = 0;
   std::vector<double> bind_factors(n_neighbors);
   const std::vector<const Rod*>& rod_nbr_list = anchors_[bound_anchor_].GetNeighborListMemRods();
@@ -209,7 +397,7 @@ void Crosslink::SinglyKMC() {
   double bind_factor_rod = anchors_[(int)!bound_anchor_].GetOnRate() * bind_site_density_;
   double bind_factor_sphere = anchors_[(int)!bound_anchor_].GetOnRate() * bind_site_density_;
 
-  /* Fill vector of bind factors with rod factors, then sphere factors */
+  // Fill vector of bind factors with rod factors, then sphere factors 
     std::fill(bind_factors.begin(), bind_factors.begin() + n_neighbors_rod, bind_factor_rod);
     std::fill(bind_factors.begin() + n_neighbors_rod, bind_factors.end(), bind_factor_sphere);
   }
@@ -218,12 +406,11 @@ void Crosslink::SinglyKMC() {
     if (!static_flag_ && polar_affinity_ != 1.0) {
       anchors_[bound_anchor_].CalculatePolarAffinity(bind_factors);
     }
-    /* Use auto-filter populated with 1's for every neighbor.
-    We already guarantee uniqueness, so we won't overcount. */
+    // Use auto-filter populated with 1's for every neighbor.
+    //We already guarantee uniqueness, so we won't overcount. 
     kmc_bind.LUCalcTotProbsSD(anchors_[bound_anchor_].GetNeighborListMemRods(), 
                               anchors_[bound_anchor_].GetNeighborListMemSpheres(), 
                               anchors_[bound_anchor_].GetBoundOID(), bind_factors); 
-
     kmc_bind_prob = kmc_bind.getTotProb();
     tracker_->TrackSD(kmc_bind_prob);
   } 
@@ -252,14 +439,13 @@ void Crosslink::SinglyKMC() {
       Logger::Trace("Crosslink %i with anchor %i came unbound", GetOID(), anchors_[bound_anchor_].GetOID()); 
     }
   } else if (head_activate == 1) {
-    //Logger::Info("Single Binding");
     // Bind unbound head
     // Track binding
     tracker_->BindSD();
-    /* Position on rod where protein will bind with respect to center of rod,
-     * passed by reference */
-    double bind_lambda;
-    /* Find out which rod we are binding to */
+    // Position on rod where protein will bind with respect to center of rod,
+    //  passed by reference 
+    //double bind_lambda;
+     //Find out which rod we are binding to 
     int i_bind = kmc_bind.whichObjBindSD(bind_lambda, roll);
     if (i_bind < 0) {
       printf("i_bind = %d\nbind_lambda = %2.2f\n", i_bind, bind_lambda);
@@ -273,11 +459,11 @@ void Crosslink::SinglyKMC() {
     if (i_bind < n_neighbors_rod) {
       Rod *bind_obj = anchors_[bound_anchor_].GetRodNeighbor(i_bind);
       double obj_length = bind_obj->GetLength();
-      /* KMC returns bind_lambda to be with respect to center of rod. We want 
-      it to be specified from the tail of the rod to be consistent */
+      // KMC returns bind_lambda to be with respect to center of rod. We want 
+      //it to be specified from the tail of the rod to be consistent 
       bind_lambda += 0.5 * obj_length;
-      /* KMC can return values that deviate a very small amount from the true 
-      rod length. Bind to ends if lambda < 0 or lambda > bond_length. */
+      // KMC can return values that deviate a very small amount from the true 
+      //rod length. Bind to ends if lambda < 0 or lambda > bond_length. 
       if (bind_lambda > obj_length) {
         bind_lambda = obj_length;
       } else if (bind_lambda < 0) {
@@ -289,7 +475,6 @@ void Crosslink::SinglyKMC() {
                   bind_obj->GetOID());
     } else {
       Sphere *bind_obj = anchors_[bound_anchor_].GetSphereNeighbor(i_bind - n_neighbors_rod);
-      //if (bind_obj -> GetNAnchored() == 0) {
       (*bound_curr_)[bind_obj].first.push_back(kmc_bind.getProb(i_bind));
       std::pair<Anchor*, std::string> anchor_and_bind_type;
       anchors_[(int)!bound_anchor_].SetCrosslinkPointer(this);
@@ -301,20 +486,18 @@ void Crosslink::SinglyKMC() {
                   bind_obj->GetOID());
       //If crosslinkers can't cross check if newly bound crosslinker is crossing
       if (sparams_ -> cant_cross == true) {
-        //Logger::Error("cant cross flag needs repairing");
         check_for_cross = true;
         last_bound_ = (int)!bound_anchor_;
         if (*global_check_for_cross_ == true) {
-          //Logger::Warning("Two crosslinks bound during same time step");
         } else {
           *global_check_for_cross_ = true;
         }
       }
-      //bind_obj -> IncrementNAnchored();
-     //}
     }
   }
 }
+
+*/
 
 //If a crosslinker was bound during this step it is flaged to check to see if 
 //it is crossing another crosslinker
@@ -356,94 +539,81 @@ void Crosslink::UnbindCrossing() {
 void Crosslink::DoublyKMC() {
   /* Calculate force-dependent unbinding for each head */
   double tether_stretch = length_ - rest_length_;
-  // For asymmetric springs apply second spring constant for compression
   double e_dep = e_dep_factor_;
   double f_dep = fdep_length_;
   if (sparams_->motor_off==true){
     e_dep=0;
     f_dep=1;
-  }
-  //double factor = 1;
-
-  //if (force_[1]<0){   
-        //factor=(1-force_[0]/30.38*.375);
-  //   factor=(1-force_[1]*0.066);
-  //   } else {
-  //   factor=(1+force_[1]*0.066);
-        //factor=(1+force_[0]/30.38*.8);
-  //    }
-  //if (force_[0]<0){   
-        //factor=(1-force_[0]/30.38*.375);
-  //   factor+=0;
-  //   } else {
-  //   factor+=force_[0]*0.033;
-        //factor=(1+force_[0]/30.38*.8);
-  //    }
-  //f_dep *= factor;
-  double s_fac =0;
-  if (k_spring_compress_ >= 0 && tether_stretch < 0) {
-    e_dep *= 0.5 * k_spring_compress_ * SQR(tether_stretch);
-  } else {
-    e_dep *= 0.5 * k_spring_ * SQR(tether_stretch);
-  }
-  double separation = anchors_[0].GetPosition()[1]-anchors_[1].GetPosition()[1];
-  if (separation<0) {
-    separation*=-1;
-  }
-  if (tether_stretch < 0 and separation > 0.6) {
-    s_fac=1;
-  }
-  if (tether_stretch > 0 and separation < 0.6) {
-    s_fac=1;
-  }
-  //printf("[%f,%f]", f_dep);
-
+  } else { //Energy dependant binding
+    // For asymmetric springs apply second spring constant for compression
+    // asymmetric spring not set up for motor_off
+    if (k_spring_compress_ >= 0 && tether_stretch < 0) {
+      e_dep *= 0.5 * k_spring_compress_ * SQR(tether_stretch);
+    } else {
+      e_dep *= 0.5 * k_spring_ * SQR(tether_stretch);
+    }
+    double angle=0;
+    if (orientation_[1]>0) {
+        angle=acos(orientation_[0]);
+    } else {
+        angle=acos(-orientation_[0]);
+    }
+      double angular_energy = 0.5*(sparams_->k_align)*(sparams_->rest_angle-angle)*(sparams_->rest_angle-angle);
+      e_dep+=angular_energy;
+      //printf("angle = %f\n", angle);
+    }
   std::vector<double> unbind_prob;
-  double k1_0 = sparams_->k_0; //0.005; //0.05;
-  double x1 = 0.04; //0.0587;
-  double y1 =0.018; //0.027; //0.018;
-  double k2_0 = 0.356;
-  double x2=0.0072;
-  double y2=0;
+  double y_boost = sparams_->y_boost;
+  double k1_0 = sparams_->k_0;
+  double x1 = 0.0198;
+  double y1 = 0.1454;
+  double k2_0 = 0.0232;
+  double x2=0.0124;
+  double y2=0.0100;
+  double s_fac=1;
+
+    double angle=0;
+    if (orientation_[1]>0) {
+        angle=acos(orientation_[0]);
+    } else {
+        angle=acos(-orientation_[0]);
+    }
+      //printf("angle = %f\n", angle);
+    
+
   for (int i = 0; i < 2; i++) {
-    //Logger::Info("Off is %f", anchors_[i].GetOffRate());
+    
     if (sparams_->motor_off==false){
       unbind_prob.push_back(anchors_[i].GetOffRate() * delta_ * exp(e_dep + f_dep));
     } else{
-      if (off_calc_fx_<0) {
-        off_calc_fx_=off_calc_fx_*-1;
+      //if (off_calc_fx_<0) {
+      //  off_calc_fx_=off_calc_fx_*-1;
+      //}
+      double k1;
+      double k2;
+      //printf("stretch AND ANGLE and force are, %f,%f, %f\n \n", tether_stretch, angle, off_calc_fx_[i]);
+      if (off_calc_fy_[i]>0){
+        k1=k1_0*exp(off_calc_fx_[i]*x1+y_boost*abs(off_calc_fy_[i]*y1));
+        k2=k2_0*exp(off_calc_fx_[i]*x2+y_boost*abs(off_calc_fy_[i]*y2));
+      } else {
+         k1=k1_0*exp(off_calc_fx_[i]*x1+abs(off_calc_fy_[i]*y1));
+        k2=k2_0*exp(off_calc_fx_[i]*x2+abs(off_calc_fy_[i]*y2));
       }
-      double k1=k1_0*exp(off_calc_fx_*x1+off_calc_fy_*y1); 
-      double k2=k2_0*exp(off_calc_fx_*x2+off_calc_fy_*y2);
-      //double off_total=k1*k2/(k1+k2)*s_fac;
-      double off_total=k1*s_fac;
-      //printf("Force x = %f, force y = %f, off = %f \n", off_calc_fx_, off_calc_fy_, off_total);
-
-      unbind_prob.push_back(off_total* delta_);
+      double off_total=k1*k2/(k1+k2);
+    double angle=0;
+    if (orientation_[1]>0) {
+        angle=acos(orientation_[0]);
+    } else {
+        angle=acos(-orientation_[0]);
+    }
+      //printf("\n \n");
+      //printf("angle is %f, off is %f, length is %f\n", angle, off_total, length_);
+      //printf("Tether stretch is, %f, locations are  %f,%f    %f,%f \n", tether_stretch, anchors_[0].GetPosition()[0],anchors_[0].GetPosition()[1], anchors_[1].GetPosition()[0], anchors_[1].GetPosition()[1]);
+      //printf("Force 1 = %f,%f force 2 = %f,%f off = %f \n", off_calc_fx_[0], off_calc_fy_[0],off_calc_fx_[1], off_calc_fy_[1], off_total);
+      //Logger::Info("Off is %f for %i", off_total, i);
+      unbind_prob.push_back(off_total*delta_);
     }
   }
- /*
-  std::vector<double> unbind_prob;
-  double off_rate = sparams_->k_0;
-  double base_off = 0.0249;
-  double off_total = 0;
-  for (int i = 0; i < 2; i++) {
-    //Logger::Info("Off is %f", anchors_[i].GetOffRate());
-    if (sparams_->motor_off==false){
-      unbind_prob.push_back(anchors_[i].GetOffRate() * delta_ * exp(e_dep + f_dep));
-    } else{
-      if (off_calc_fx_<0) {
-        off_total=base_off-off_calc_fx_*0.000469;
-      } else{
-        off_total=base_off+off_calc_fx_*0.00257;
-      }
-      off_total*=off_rate/base_off;
-      unbind_prob.push_back(off_total* delta_*s_fac);
-    }
-  }
-  */
-
-
   tracker_->TrackDS(unbind_prob[0]); // Richelle modify to track full prob
   double roll = rng_.RandomUniform();
   int head_activate = -1;
@@ -491,7 +661,7 @@ std::vector<double> Crosslink::GetAnchorS() {
   return s_values_;
 }
 
-//Get how far anchors are along the filaments
+//Check if crosslink is still double bound
 bool Crosslink::StillDBound() {
   bool double_bound;
   double_bound = (anchors_[0].StillBound() && anchors_[1].StillBound());
@@ -546,6 +716,7 @@ void Crosslink::UpdateCrosslinkPositions() {
   if (!IsFree()) {
     /* Have anchors diffuse/walk along mesh */
     UpdateAnchorPositions();
+    UpdatePeriodic();
   } else {
     DiffuseFree();
     UpdatePeriodic();
@@ -556,6 +727,7 @@ void Crosslink::UpdateCrosslinkPositions() {
     /* Check for binding/unbinding events using KMC */
     CalculateBinding();
   }
+  UpdatePeriodic();
 }
 
 //Diffuse for unbound, tracked crosslinkers
@@ -656,20 +828,59 @@ void Crosslink::CalculateTetherForces() {
   else
     tether_force_ = k_spring_ * stretch;
 
+  double angle=0;
+  bool upside_down=false;
+  if (orientation_[1]>0) {
+      angle=acos(orientation_[0]);
+  } else {
+      angle=acos(-orientation_[0]);
+      upside_down=true;
+  }
+ 
   for (int i = 0; i < params_->n_dim; ++i) {
     force_[i] = tether_force_ * orientation_[i];
   }
-  //printf("orientation = %f, %f, force = mag %f, %f, %f, anchor locations are %f, %f\n", orientation_[0], orientation_[1], tether_force_, force_[0], force_[1], anchors_[0].GetPosition()[1], anchors_[1].GetPosition()[1]);
+
+  double torque = (sparams_->k_align)*(sparams_->rest_angle-angle);
+  double angular_force = torque*orientation_[1]/length_;
+  
+  
+  off_calc_fy_[0]=-sin(angle)*tether_force_;
+  off_calc_fy_[1]=-sin(angle)*tether_force_;
+
+  
+  if (upside_down==false){
+    off_calc_fx_[0] = anchors_[0].GetRodOrientation()*cos(angle)*tether_force_;
+    off_calc_fx_[1] =-anchors_[1].GetRodOrientation()*cos(angle)*tether_force_;
+  } else {
+    off_calc_fx_[0] =-anchors_[0].GetRodOrientation()*cos(angle)*tether_force_;
+    off_calc_fx_[1] = anchors_[1].GetRodOrientation()*cos(angle)*tether_force_; 
+
+  }
+
+
+  //printf("Force mag is %f,angle is %f , Orientation of anchors are %f, %f, forces are x1=%f, x2=%f, y1=%f, y2=%f \n \n", tether_force_, angle, anchors_[0].GetRodOrientation(), anchors_[1].GetRodOrientation(), off_calc_fx_[0],   off_calc_fx_[1],  off_calc_fy_[0],  off_calc_fy_[1]);
+  force_[0]+=torque*orientation_[1]/length_;
+  force_[1]-=torque*orientation_[0]/length_;
+  
+
+  if (anchors_[0].GetPosition()[1]>anchors_[1].GetPosition()[1]){
+  //  force_[1]+=angular_force;
+    //printf("0 on top adding force %f for anchor 0 \n", angular_force);
+  } else {
+  //  force_[1]-=angular_force;
+    //printf("0 on botttom adding force %f for anchor 0 \n", angular_force);
+  }
+  //printf("adding force %f, %f\n", force_[0], force_[1]);
+  //printf("anchor positions [%f,%f] [%f,%f] for anchors,OIDs are %i, %i   \n", anchors_[0].GetPosition()[0], anchors_[0].GetPosition()[1]  , anchors_[1].GetPosition()[1], anchors_[1].GetPosition()[1], anchors_[0].GetOID(), anchors_[1].GetOID());
+  //printf("for angle %f, angular force is %f, kalign is %f\n, ", angle, angular_force, sparams_->k_align); 
+  //printf("\n");
+ 
+ 
   anchors_[0].AddForce(force_);
   anchors_[1].SubForce(force_);
- 
-  if (anchors_[0].GetPosition()[1]>anchors_[1].GetPosition()[1]){
-    off_calc_fx_=-force_[0];
-    off_calc_fy_=force_[1];
-  } else {
-    off_calc_fx_=force_[0];
-    off_calc_fy_=-force_[1];
-  }
+
+  //printf("Orientations are %f, %f \n",anchors_[0].GetRodOrientation(), anchors_[1].GetRodOrientation());
 
   //If anchors are double bound and hopping between receptors then we need to calculate 
   //the energy to the neighboring sites to determine hopping rates
@@ -682,11 +893,20 @@ void Crosslink::CalculateTetherForces() {
     MinimumDistance mindist_zo;
     mindist_zo.ObjectObject(ix_zo);
     double length_zo_ = sqrt(ix_zo.dr_mag2);
+    double angle=0;
+    if (orientation_[1]>0) {
+        angle=acos(orientation_[0]);
+    } else {
+        angle=acos(-orientation_[0]);
+    }
+    //printf("crosslinker orientation is %f, %f, %f\n", orientation_[0], orientation_[1], angle);
     if (anchors_[0].IsWalker() == false) {
       anchors_[0].SetCrosslinkLength(length_zo_);
+      anchors_[0].SetCrosslinkAngle(angle);
     }
     if (anchors_[1].IsWalker() == false) {
       anchors_[1].SetCrosslinkLength(length_zo_);
+      anchors_[1].SetCrosslinkAngle(angle);
     }
     
     if(anchors_[1].IsWalker() == false) {
@@ -697,6 +917,7 @@ void Crosslink::CalculateTetherForces() {
       //If anchor is at plus end of microtubule it won't have a plus neighbor
       if (one_plus_n_ == nullptr) {
         anchors_[1].SetLengthAtPlus(-1);
+        anchors_[1].SetAngleAtPlus(-1);
       }
       else {
         //Get length between anchor zero and plus neighbor of anchor one
@@ -704,12 +925,23 @@ void Crosslink::CalculateTetherForces() {
         MinimumDistance mindist_zp;
         mindist_zp.ObjectObject(ix_zp);
         double length_zp_ = sqrt(ix_zp.dr_mag2);
-        anchors_[1].SetLengthAtPlus(length_zp_);  
+        double orientation_x = ix_zp.dr[0]/length_zp_;
+        double orientation_y = ix_zp.dr[1]/length_zp_;
+        double anglep=0;
+        if (orientation_y>0) {
+           anglep=acos(orientation_x);
+        } else {
+           anglep=acos(-orientation_x);
+        }
+        //printf("orientation of plus is %f, %f %f\n", orientation_x, orientation_y, anglep);
+        anchors_[1].SetLengthAtPlus(length_zp_); 
+        anchors_[1].SetAngleAtPlus(anglep);
       }
 
       //If anchor is at minus end of microtubule it won't have a plus neighbor
       if (one_minus_n_ == nullptr) {
         anchors_[1].SetLengthAtMinus(-1);
+        anchors_[1].SetAngleAtMinus(-1);
       }
       else { 
         //Get length between anchor zero and minus neighbor of anchor one
@@ -717,7 +949,17 @@ void Crosslink::CalculateTetherForces() {
         MinimumDistance mindist_zm;
         mindist_zm.ObjectObject(ix_zm);
         double length_zm_ = sqrt(ix_zm.dr_mag2);
+        double orientation_x = ix_zm.dr[0]/length_zm_;
+        double orientation_y = ix_zm.dr[1]/length_zm_;
+        double anglem=0;
+        if (orientation_y>0) {
+           anglem=acos(orientation_x);
+        } else {
+           anglem=acos(-orientation_x);
+        }
+        //printf("orientation of minus is %f, %f, %f\n", orientation_x, orientation_y, anglem);
         anchors_[1].SetLengthAtMinus(length_zm_);
+        anchors_[1].SetAngleAtMinus(anglem);
       }
    }
 
@@ -728,20 +970,31 @@ void Crosslink::CalculateTetherForces() {
      //If anchor is at plus end of microtubule it won't have a plus neighbor
      if (zero_plus_n_ == nullptr) {
        anchors_[0].SetLengthAtPlus(-1);
+       anchors_[0].SetAngleAtPlus(-1);
      }
 
      else { 
-
        //Get length between anchor one and plus neighbor of anchor zero
        Interaction ix_op(sphere_one_, zero_plus_n_);
        MinimumDistance mindist_op;
        mindist_op.ObjectObject(ix_op);
        double length_op_ = sqrt(ix_op.dr_mag2); 
-       anchors_[0].SetLengthAtPlus(length_op_);
+       double orientation_x = ix_op.dr[0]/length_op_;
+       double orientation_y = ix_op.dr[1]/length_op_;
+       double anglep2=0;
+       if (orientation_y>0) {
+         anglep2=acos(orientation_x);
+       } else {
+         anglep2=acos(-orientation_x);
+       }
+       //printf("orientation of plus 2 is %f, %f, %f \n", orientation_x, orientation_y, anglep2);
+      anchors_[0].SetLengthAtPlus(length_op_);
+      anchors_[0].SetAngleAtPlus(anglep2);
       }
       //If anchor is at plus end of microtubule it won't have a plus neighbor
       if (zero_minus_n_ == nullptr) {
         anchors_[0].SetLengthAtMinus(-1);
+        anchors_[0].SetAngleAtMinus(-1);
       }
       else {  
         //Get length between anchor one and minus neighbor of anchor zero
@@ -749,8 +1002,18 @@ void Crosslink::CalculateTetherForces() {
         MinimumDistance mindist_om;
         mindist_om.ObjectObject(ix_om);
         double length_om_ = sqrt(ix_om.dr_mag2); 
-        anchors_[0].SetLengthAtMinus(length_om_);
-      }
+        double orientation_x = ix_om.dr[0]/length_om_;
+        double orientation_y = ix_om.dr[1]/length_om_;
+        double anglem2=0;
+        if (orientation_y>0) {
+          anglem2=acos(orientation_x);
+        } else {
+          anglem2=acos(-orientation_x);
+        }
+        //printf("orientation of minus 2 is %f, %f, %f \n", orientation_x, orientation_y, anglem2);
+         anchors_[0].SetLengthAtMinus(length_om_);
+         anchors_[0].SetAngleAtMinus(anglem2);
+       }
     }
   }
   // If one anchor induces catastrophe and the other is attached to a filament, depolymerize
