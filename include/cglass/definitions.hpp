@@ -10,9 +10,9 @@
   Enum() = default;
 #include "enum.hpp"
 
-#if defined(_OPENMP)
-#define ENABLE_OPENMP
-#endif
+//#if defined(_OPENMP)
+//#define ENABLE_OPENMP
+//#endif
 
 BETTER_ENUM(species_id, unsigned char, br_bead, filament, rigid_filament,
             spherocylinder, spindle, crosslink, receptor, point_cover, none);
